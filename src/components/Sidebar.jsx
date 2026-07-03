@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   HiOutlineMenu,
   HiOutlinePlus,
@@ -46,14 +45,7 @@ export default function Sidebar({ isOpen, onToggle, onNewChat, onOpenSettings })
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2">
-          <p className="text-xs text-zinc-500 px-3 py-2 uppercase tracking-wider font-medium">
-            Chat History
-          </p>
-          <div className="text-center text-zinc-600 text-sm py-8">
-            Messages appear here
-          </div>
-        </div>
+        <div className="flex-1" />
 
         <div className="p-3 border-t border-surface-border space-y-1">
           <button
