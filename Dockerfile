@@ -6,10 +6,7 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine
-RUN apk add --no-cache wget
 RUN npm install -g serve
 COPY --from=build /app/dist /app/dist
 EXPOSE 3000
-HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://127.0.0.1:3000/ || exit 1
 CMD ["serve", "-s", "dist", "-l", "3000"]
