@@ -6,7 +6,8 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine
-RUN npm install -g serve
 COPY --from=build /app/dist /app/dist
+COPY server.js /app/server.js
+WORKDIR /app
 EXPOSE 3000
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["node", "server.js"]
