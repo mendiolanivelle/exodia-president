@@ -1,25 +1,6 @@
-import { useState, useEffect } from 'react';
 import { HiOutlineX } from 'react-icons/hi';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-
-const MODELS = [
-  { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Fast)' },
-  { id: 'openai/gpt-4o', label: 'GPT-4o (Powerful)' },
-  { id: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-  { id: 'google/gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-];
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const [model, setModel] = useLocalStorage('exodia-model', 'openai/gpt-4o-mini');
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (saved) {
-      const timer = setTimeout(() => setSaved(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [saved]);
-
   if (!isOpen) return null;
 
   return (
@@ -35,37 +16,21 @@ export default function SettingsModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1.5 font-medium">
-              Model
-            </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-brand-orange transition-colors appearance-none cursor-pointer"
-            >
-              {MODELS.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="p-6 text-center">
+          <p className="text-sm text-zinc-400 mb-4">
+            API key and AI model are configured on the server.
+          </p>
+          <p className="text-xs text-zinc-600">
+            Contact the administrator to change these settings.
+          </p>
         </div>
 
-        <div className="p-4 border-t border-surface-border flex items-center justify-between">
-          <p className="text-xs text-zinc-500">
-            API key is configured on the server
-          </p>
+        <div className="p-4 border-t border-surface-border flex justify-end">
           <button
-            onClick={() => {
-              setSaved(true);
-              onClose();
-            }}
+            onClick={onClose}
             className="px-4 py-2 rounded-xl bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors"
           >
-            Done
+            Close
           </button>
         </div>
       </div>

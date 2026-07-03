@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import { useLocalStorage } from './useLocalStorage';
 import { sendMessage } from '../lib/api';
 
 export function useChat() {
@@ -7,7 +6,6 @@ export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
-  const [model] = useLocalStorage('exodia-model', 'openai/gpt-4o-mini');
 
   const loadMessages = useCallback(() => {
     try {
@@ -64,7 +62,7 @@ export function useChat() {
           .map((m) => ({ role: m.role, content: m.content }));
         const cleanMessages = apiMessages.slice(0, -1);
 
-        const body = await sendMessage(cleanMessages, model);
+        const body = await sendMessage(cleanMessages);
         const reader = body.getReader();
         const decoder = new TextDecoder();
         let accumulated = '';
@@ -123,7 +121,7 @@ export function useChat() {
         abortRef.current = null;
       }
     },
-    [messages, model, persistMessages],
+    [messages, persistMessages],
   );
 
   const clearChat = useCallback(() => {

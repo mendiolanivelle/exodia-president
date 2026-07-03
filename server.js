@@ -6,6 +6,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const DIST = path.join(__dirname, 'dist');
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
+const AI_MODEL = process.env.AI_MODEL || 'openai/gpt-4o-mini';
 
 const SYSTEM_PROMPT =
   'You are the President of Exodia, a visionary leader overseeing game development, technology, and innovation. ' +
@@ -70,7 +71,7 @@ function proxyChat(req, res) {
       return;
     }
 
-    const { messages = [], model = 'openai/gpt-4o-mini' } = parsed;
+    const { messages = [] } = parsed;
 
     const proxyReq = https.request(
       {
@@ -113,7 +114,7 @@ function proxyChat(req, res) {
 
     proxyReq.write(
       JSON.stringify({
-        model,
+        model: AI_MODEL,
         messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
         temperature: 0.7,
         stream: true,

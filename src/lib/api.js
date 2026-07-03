@@ -1,11 +1,8 @@
-export async function sendMessage(messages, model) {
+export async function sendMessage(messages) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messages,
-      model: model || 'openai/gpt-4o-mini',
-    }),
+    body: JSON.stringify({ messages }),
     signal: AbortSignal.timeout ? AbortSignal.timeout(120000) : undefined,
   });
 
