@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import SettingsModal from './components/SettingsModal';
@@ -15,12 +15,7 @@ export default function App() {
     send,
     clearChat,
     clearError,
-    loadMessages,
   } = useChat();
-
-  useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
 
   const handleNewChat = useCallback(() => {
     clearChat();

@@ -7,25 +7,6 @@ export function useChat() {
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
-  const loadMessages = useCallback(() => {
-    try {
-      const saved = localStorage.getItem('exodia-chat-messages');
-      if (saved) {
-        setMessages(JSON.parse(saved));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const persistMessages = useCallback((msgs) => {
-    try {
-      localStorage.setItem('exodia-chat-messages', JSON.stringify(msgs));
-    } catch {
-      // ignore
-    }
-  }, []);
-
   const clearError = useCallback(() => setError(null), []);
 
   const send = useCallback(
@@ -49,7 +30,6 @@ export function useChat() {
 
       const updated = [...messages, userMsg, assistantMsg];
       setMessages(updated);
-      persistMessages(updated);
       setIsStreaming(true);
       setError(null);
 
@@ -83,13 +63,11 @@ export function useChat() {
               const delta = parsed.choices?.[0]?.delta?.content;
               if (delta) {
                 accumulated += delta;
-                setMessages((prev) => {
-                  const next = prev.map((m) =>
+                setMessages((prev) =>
+                  prev.map((m) =>
                     m.id === assistantId ? { ...m, content: accumulated } : m,
-                  );
-                  persistMessages(next);
-                  return next;
-                });
+                  ),
+                );
               }
             } catch {
               // skip malformed chunk
@@ -97,8 +75,8 @@ export function useChat() {
           }
         }
 
-        persistMessages(
-          updated.map((m) =>
+        setMessages((prev) =>
+          prev.map((m) =>
             m.id === assistantId ? { ...m, content: accumulated } : m,
           ),
         );
@@ -121,7 +99,7 @@ export function useChat() {
         abortRef.current = null;
       }
     },
-    [messages, persistMessages],
+    [messages],
   );
 
   const clearChat = useCallback(() => {
@@ -129,11 +107,6 @@ export function useChat() {
     setMessages([]);
     setIsStreaming(false);
     setError(null);
-    try {
-      localStorage.removeItem('exodia-chat-messages');
-    } catch {
-      // ignore
-    }
   }, []);
 
   const stopStreaming = useCallback(() => {
@@ -148,6 +121,5 @@ export function useChat() {
     clearChat,
     stopStreaming,
     clearError,
-    loadMessages,
   };
 }
