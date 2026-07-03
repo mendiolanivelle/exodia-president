@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HiOutlineX, HiOutlineKey, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
+import { HiOutlineX } from 'react-icons/hi';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const MODELS = [
@@ -10,9 +10,7 @@ const MODELS = [
 ];
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const [apiKey, setApiKey] = useLocalStorage('exodia-api-key', '');
   const [model, setModel] = useLocalStorage('exodia-model', 'openai/gpt-4o-mini');
-  const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -40,46 +38,6 @@ export default function SettingsModal({ isOpen, onClose }) {
         <div className="p-4 space-y-4">
           <div>
             <label className="block text-sm text-zinc-400 mb-1.5 font-medium">
-              OpenRouter API Key
-            </label>
-            <div className="relative">
-              <HiOutlineKey className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => {
-                  setApiKey(e.target.value);
-                  setSaved(false);
-                }}
-                placeholder="sk-or-v1-..."
-                className="w-full bg-surface-input border border-surface-border rounded-xl pl-10 pr-10 py-2.5 text-sm text-white outline-none focus:border-brand-orange transition-colors"
-              />
-              <button
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-              >
-                {showKey ? (
-                  <HiOutlineEyeOff className="w-4 h-4" />
-                ) : (
-                  <HiOutlineEye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            <p className="text-xs text-zinc-600 mt-1.5">
-              Get your key at{' '}
-              <a
-                href="https://openrouter.ai/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-orange hover:underline"
-              >
-                openrouter.ai/keys
-              </a>
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1.5 font-medium">
               Model
             </label>
             <select
@@ -98,7 +56,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
         <div className="p-4 border-t border-surface-border flex items-center justify-between">
           <p className="text-xs text-zinc-500">
-            Stored locally in your browser
+            API key is configured on the server
           </p>
           <button
             onClick={() => {
@@ -107,7 +65,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             }}
             className="px-4 py-2 rounded-xl bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors"
           >
-            Save
+            Done
           </button>
         </div>
       </div>

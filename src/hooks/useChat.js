@@ -7,7 +7,6 @@ export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
-  const [apiKey] = useLocalStorage('exodia-api-key', '');
   const [model] = useLocalStorage('exodia-model', 'openai/gpt-4o-mini');
 
   const loadMessages = useCallback(() => {
@@ -33,10 +32,6 @@ export function useChat() {
 
   const send = useCallback(
     async (content) => {
-      if (!apiKey) {
-        setError('Please add your OpenRouter API key in settings.');
-        return;
-      }
       if (!content.trim()) return;
 
       const userMsg = {
@@ -69,7 +64,7 @@ export function useChat() {
           .map((m) => ({ role: m.role, content: m.content }));
         const cleanMessages = apiMessages.slice(0, -1);
 
-        const body = await sendMessage(apiKey, cleanMessages, model);
+        const body = await sendMessage(cleanMessages, model);
         const reader = body.getReader();
         const decoder = new TextDecoder();
         let accumulated = '';
@@ -104,9 +99,6 @@ export function useChat() {
           }
         }
 
-        const finalMessages = messages.concat(
-          { ...assistantMsg, content: accumulated },
-        );
         persistMessages(
           updated.map((m) =>
             m.id === assistantId ? { ...m, content: accumulated } : m,
@@ -131,7 +123,7 @@ export function useChat() {
         abortRef.current = null;
       }
     },
-    [apiKey, messages, model, persistMessages],
+    [messages, model, persistMessages],
   );
 
   const clearChat = useCallback(() => {
@@ -159,6 +151,5 @@ export function useChat() {
     stopStreaming,
     clearError,
     loadMessages,
-    hasApiKey: !!apiKey,
   };
 }

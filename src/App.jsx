@@ -14,7 +14,6 @@ export default function App() {
     error,
     send,
     clearChat,
-    hasApiKey,
     clearError,
     loadMessages,
   } = useChat();
@@ -51,7 +50,6 @@ export default function App() {
         <ChatArea
           messages={messages}
           isStreaming={isStreaming}
-          hasApiKey={hasApiKey}
           onSend={send}
           onPromptClick={handlePromptClick}
         />

@@ -6,7 +6,6 @@ import ThinkingIndicator from './ThinkingIndicator';
 export default function ChatArea({
   messages,
   isStreaming,
-  hasApiKey,
   onSend,
   onPromptClick,
 }) {
@@ -41,7 +40,7 @@ export default function ChatArea({
 
       <ChatInput
         onSend={onSend}
-        disabled={isStreaming || !hasApiKey}
+        disabled={isStreaming}
       />
     </div>
   );
