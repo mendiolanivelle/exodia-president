@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import GuidePage from './components/GuidePage';
 import ObjectionAssistantPage from './components/ObjectionAssistantPage';
+import TesdaAiCoursePage from './components/TesdaAiCoursePage';
 import SettingsModal from './components/SettingsModal';
 import Toast from './components/Toast';
 import { useChat } from './hooks/useChat';
@@ -51,6 +52,8 @@ export default function App() {
           <GuidePage />
         ) : activeView === 'objections' ? (
           <ObjectionAssistantPage />
+        ) : activeView === 'tesda-ai' ? (
+          <TesdaAiCoursePage />
         ) : (
           <ChatArea
             messages={messages}

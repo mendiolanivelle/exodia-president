@@ -1,4 +1,5 @@
 import {
+  HiOutlineAcademicCap,
   HiOutlineBookOpen,
   HiOutlineChatAlt2,
   HiOutlineClipboardCheck,
@@ -73,6 +74,13 @@ export default function Sidebar({
           >
             <HiOutlineClipboardCheck className="w-4 h-4" />
             Objection Assistant
+          </button>
+          <button
+            onClick={() => onSelectView('tesda-ai')}
+            className={itemClass('tesda-ai')}
+          >
+            <HiOutlineAcademicCap className="w-4 h-4" />
+            TESDA AI Course
           </button>
           <button
             onClick={() => {
