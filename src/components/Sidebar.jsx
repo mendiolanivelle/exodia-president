@@ -1,11 +1,27 @@
 import {
+  HiOutlineBookOpen,
+  HiOutlineChatAlt2,
   HiOutlineMenu,
   HiOutlinePlus,
   HiOutlineCog,
   HiOutlineX,
 } from 'react-icons/hi';
 
-export default function Sidebar({ isOpen, onToggle, onNewChat, onOpenSettings }) {
+export default function Sidebar({
+  isOpen,
+  activeView,
+  onSelectView,
+  onToggle,
+  onNewChat,
+  onOpenSettings,
+}) {
+  const itemClass = (view) =>
+    `w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+      activeView === view
+        ? 'bg-brand-orange text-white'
+        : 'text-zinc-400 hover:bg-surface-input hover:text-white'
+    }`;
+
   return (
     <>
       {isOpen && (
@@ -37,7 +53,24 @@ export default function Sidebar({ isOpen, onToggle, onNewChat, onOpenSettings })
 
         <div className="p-3 space-y-1">
           <button
-            onClick={onNewChat}
+            onClick={() => onSelectView('chat')}
+            className={itemClass('chat')}
+          >
+            <HiOutlineChatAlt2 className="w-4 h-4" />
+            Chat
+          </button>
+          <button
+            onClick={() => onSelectView('guide')}
+            className={itemClass('guide')}
+          >
+            <HiOutlineBookOpen className="w-4 h-4" />
+            SEC Guide
+          </button>
+          <button
+            onClick={() => {
+              onSelectView('chat');
+              onNewChat();
+            }}
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-surface-border hover:bg-surface-input text-sm text-zinc-300 hover:text-white transition-colors"
           >
             <HiOutlinePlus className="w-4 h-4" />
