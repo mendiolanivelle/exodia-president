@@ -6,6 +6,87 @@ A: My secretary told me he said he would pay soon.
 Q: What did the contract say about penalties?
 Q: You probably knew the invoice was fake, correct?`;
 
+function escapeHtml(value) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function exportReviewerPdf(input, analysis) {
+  const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+  if (!printWindow) return;
+
+  const createdAt = new Date().toLocaleString('en-PH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Objection Reviewer</title>
+        <style>
+          @page { margin: 18mm; }
+          body {
+            color: #111827;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.55;
+          }
+          h1 { font-size: 22px; margin: 0 0 4px; }
+          h2 {
+            border-bottom: 1px solid #d1d5db;
+            font-size: 15px;
+            margin: 24px 0 8px;
+            padding-bottom: 4px;
+          }
+          .meta { color: #4b5563; margin-bottom: 20px; }
+          .notice {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            margin: 16px 0;
+            padding: 10px;
+          }
+          pre {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Objection Reviewer</h1>
+        <div class="meta">Generated ${escapeHtml(createdAt)} | Philippine Rules of Court attorney review copy</div>
+        <div class="notice">
+          This document is an AI-generated review aid. Counsel must verify the objections against the current Rules of Court, case context, offer of evidence, exceptions, waiver, and court instructions.
+        </div>
+        <h2>Source Material</h2>
+        <pre>${escapeHtml(input)}</pre>
+        <h2>AI Objection Analysis</h2>
+        <pre>${escapeHtml(analysis)}</pre>
+        <h2>Attorney Review Checklist</h2>
+        <ul>
+          <li>Confirm the purpose for which the evidence is offered.</li>
+          <li>Check whether an exception, waiver, stipulation, or admission applies.</li>
+          <li>Match the objection to timing: question, answer, formal offer, or written offer.</li>
+          <li>Keep courtroom phrasing short and preserve detailed reasoning for argument.</li>
+          <li>Verify current rules, special proceedings, and judge-specific instructions.</li>
+          <li>Treat every output as a prompt for counsel, not a final legal conclusion.</li>
+        </ul>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
 async function readStreamingResponse(body, onText) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -121,7 +202,17 @@ export default function ObjectionAssistantPage() {
         </section>
 
         <section className="bg-surface-card border border-surface-border rounded-lg p-5">
-          <h2 className="text-lg font-semibold text-white">AI Output</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-white">AI Output</h2>
+            <button
+              type="button"
+              onClick={() => exportReviewerPdf(text, output)}
+              disabled={!output || isLoading}
+              className="px-3 py-1.5 rounded-lg border border-surface-border text-xs text-zinc-300 hover:bg-surface-input hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Export PDF
+            </button>
+          </div>
 
           {error && (
             <div className="mt-4 rounded-lg border border-red-800 bg-red-950/70 p-4 text-sm text-red-200">
