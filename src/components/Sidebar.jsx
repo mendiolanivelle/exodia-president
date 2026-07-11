@@ -1,6 +1,7 @@
 import {
   HiOutlineBookOpen,
   HiOutlineChatAlt2,
+  HiOutlineClipboardCheck,
   HiOutlineMenu,
   HiOutlinePlus,
   HiOutlineCog,
@@ -65,6 +66,13 @@ export default function Sidebar({
           >
             <HiOutlineBookOpen className="w-4 h-4" />
             SEC Guide
+          </button>
+          <button
+            onClick={() => onSelectView('objections')}
+            className={itemClass('objections')}
+          >
+            <HiOutlineClipboardCheck className="w-4 h-4" />
+            Objection Assistant
           </button>
           <button
             onClick={() => {
