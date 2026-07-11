@@ -14,6 +14,12 @@ const SYSTEM_PROMPT =
   'Respond formally but approachably, as a president would to their people. ' +
   'Keep answers concise and inspiring. You lead a nation built on creativity and code.';
 
+const OBJECTION_SYSTEM_PROMPT =
+  'You are a Philippine litigation support assistant for lawyers. Analyze pasted transcript lines, affidavit text, exhibit descriptions, or draft questions under the Philippine Rules of Court, especially the Rules on Evidence. ' +
+  'Return possible objections for attorney review only, not final legal advice. ' +
+  'For each flagged line or passage, provide: quoted text, possible objection, concise basis with rule reference when known, suggested courtroom phrasing, confidence, and attorney review note. ' +
+  'If no clear objection appears, say so and list manual review points. Keep the answer practical, structured, and careful about exceptions, waiver, purpose of offer, and context.';
+
 const MIME = {
   '.html': 'text/html',
   '.js': 'application/javascript',
@@ -71,7 +77,8 @@ function proxyChat(req, res) {
       return;
     }
 
-    const { messages = [] } = parsed;
+    const { messages = [], mode = 'chat' } = parsed;
+    const systemPrompt = mode === 'objections' ? OBJECTION_SYSTEM_PROMPT : SYSTEM_PROMPT;
 
     const proxyReq = https.request(
       {
@@ -115,7 +122,7 @@ function proxyChat(req, res) {
     proxyReq.write(
       JSON.stringify({
         model: AI_MODEL,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
         temperature: 0.7,
         stream: true,
       }),
