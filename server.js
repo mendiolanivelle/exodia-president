@@ -105,24 +105,20 @@ async function fetchDocContent() {
     .replace(/\\r/g, '')
     .trim();
 
-  let validKey;
-  try {
-    validKey = crypto.createPrivateKey(key);
-  } catch (keyErr) {
-    throw new Error(`Invalid private key format: ${keyErr.message}`);
-  }
-
   const jwt = new google.auth.JWT(
     GOOGLE_CLIENT_EMAIL,
     null,
-    validKey.export({ type: 'pkcs1', format: 'pem' }),
+    key,
     ['https://www.googleapis.com/auth/documents.readonly'],
   );
 
   try {
-    await jwt.authorize();
+    const creds = await jwt.authorize();
+    if (!creds || !creds.access_token) {
+      throw new Error('JWT authorize returned no access token');
+    }
   } catch (authErr) {
-    throw new Error(`Auth failed: ${authErr.message}`);
+    throw new Error(`Auth failed (${authErr.code || 'no-code'}): ${authErr.message}`);
   }
 
   const docs = google.docs({ version: 'v1', auth: jwt });
