@@ -126,6 +126,7 @@ export default function DocPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [debug, setDebug] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,10 +161,15 @@ export default function DocPage() {
   if (loading) return <LoadingSkeleton />;
   if (error) return <ErrorState message={error} debug={debug} />;
 
+  const hasTabs = doc.tabs && doc.tabs.length > 0;
+  const currentContent = hasTabs
+    ? doc.tabs[activeTab]?.sections || []
+    : doc.sections;
+
   return (
-    <div className="flex-1 overflow-y-auto bg-surface-dark">
-      <div className="border-b border-surface-border px-4 py-3">
-        <div className="max-w-4xl mx-auto">
+    <div className="flex-1 flex flex-col min-h-0 bg-surface-dark">
+      <div className="border-b border-surface-border px-4 py-3 shrink-0">
+        <div className="max-w-5xl mx-auto">
           <p className="text-xs uppercase tracking-widest text-brand-orange font-semibold">
             Legal Guide
           </p>
@@ -173,10 +179,39 @@ export default function DocPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {doc.sections.map((section, i) => (
-          <DocSection key={i} section={section} />
-        ))}
+      {hasTabs && (
+        <div className="border-b border-surface-border shrink-0">
+          <div className="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto py-2">
+            {doc.tabs.map((tab, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveTab(i)}
+                className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === i
+                    ? 'bg-brand-orange text-white'
+                    : 'text-zinc-400 hover:bg-surface-input hover:text-white'
+                }`}
+              >
+                {tab.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto">
+        {hasTabs && (
+          <div className="max-w-5xl mx-auto px-4 pt-2">
+            <h2 className="text-xl font-semibold text-brand-orange mt-4 mb-4">
+              {doc.tabs[activeTab]?.title}
+            </h2>
+          </div>
+        )}
+        <div className="max-w-5xl mx-auto px-4 py-2">
+          {currentContent.map((section, i) => (
+            <DocSection key={i} section={section} />
+          ))}
+        </div>
       </div>
     </div>
   );

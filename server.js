@@ -85,17 +85,21 @@ function parseContent(content) {
 
 function transformDoc(doc) {
   const sections = parseContent(doc.body?.content || []);
+  const tabs = [];
 
   if (doc.tabs && doc.tabs.length > 0) {
     for (const tab of doc.tabs) {
-      sections.push({ type: 'h1', text: tab.tabProperties?.title || 'Untitled Tab' });
-      sections.push(...parseContent(tab.body?.content || []));
+      tabs.push({
+        title: tab.tabProperties?.title || 'Untitled Tab',
+        sections: parseContent(tab.body?.content || []),
+      });
     }
   }
 
   return {
     title: doc.title || '',
     sections,
+    tabs,
   };
 }
 
