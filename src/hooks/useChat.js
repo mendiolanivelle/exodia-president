@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { sendMessage } from '../lib/api';
+import { sendMessage, readStreamingResponse } from '../lib/api';
 
 export function useChat() {
   const [messages, setMessages] = useState([]);
@@ -42,54 +42,21 @@ export function useChat() {
           .map((m) => ({ role: m.role, content: m.content }));
         const cleanMessages = apiMessages.slice(0, -1);
 
-        const body = await sendMessage(cleanMessages);
-        const reader = body.getReader();
-        const decoder = new TextDecoder();
-        let accumulated = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n').filter((line) => line.startsWith('data: '));
-
-          for (const line of lines) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                accumulated += delta;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: accumulated } : m,
-                  ),
-                );
-              }
-            } catch {
-              // skip malformed chunk
-            }
-          }
-        }
-
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: accumulated } : m,
-          ),
-        );
+        const body = await sendMessage(cleanMessages, { signal: controller.signal });
+        await readStreamingResponse(body, (accumulated) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: accumulated } : m,
+            ),
+          );
+        });
       } catch (err) {
         if (err.name !== 'AbortError') {
           setError(err.message);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? {
-                    ...m,
-                    content: 'An error occurred. Please try again.',
-                  }
+                ? { ...m, content: 'An error occurred. Please try again.' }
                 : m,
             ),
           );

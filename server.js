@@ -1,8 +1,10 @@
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
+import http from 'node:http';
+import https from 'node:https';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 const DIST = path.join(__dirname, 'dist');
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
