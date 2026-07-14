@@ -100,7 +100,10 @@ async function fetchDocContent() {
     throw new Error('Google Doc configuration missing on server.');
   }
 
-  const key = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
+  const key = GOOGLE_PRIVATE_KEY
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .trim();
 
   let validKey;
   try {
@@ -238,7 +241,10 @@ async function serveDocApi(req, res) {
 }
 
 function serveDebug(req, res) {
-  const key = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
+  const key = GOOGLE_PRIVATE_KEY
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .trim();
   let keyStatus = 'missing';
   try {
     crypto.createPrivateKey(key);
