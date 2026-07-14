@@ -256,13 +256,45 @@ async function serveDocApi(req, res) {
   }
 }
 
-function serveDebug(req, res) {
+async function serveDebug(req, res) {
   const key = GOOGLE_PRIVATE_KEY
     .replace(/\\\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '')
     .replace(/\\$/gm, '')
     .trim();
+
+  let docInfo = null;
+  if (GOOGLE_CLIENT_EMAIL && key && GOOGLE_DOC_ID) {
+    try {
+      const keyFile = getKeyJsonPath();
+      if (keyFile) {
+        const auth = new google.auth.GoogleAuth({
+          keyFile,
+          scopes: ['https://www.googleapis.com/auth/documents.readonly'],
+        });
+        const docs = google.docs({ version: 'v1', auth });
+        const doc = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
+        const data = doc.data;
+        docInfo = {
+          title: data.title,
+          topLevelKeys: Object.keys(data),
+          hasBody: !!data.body,
+          bodyContentCount: data.body?.content?.length || 0,
+          hasTabs: !!data.tabs,
+          tabCount: data.tabs?.length || 0,
+          tabs: (data.tabs || []).map((t) => ({
+            tabId: t.tabId,
+            title: t.tabProperties?.title,
+            hasBody: !!t.body,
+            contentCount: t.body?.content?.length || 0,
+          })),
+        };
+      }
+    } catch (e) {
+      docInfo = { error: e.message };
+    }
+  }
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
@@ -274,19 +306,20 @@ function serveDebug(req, res) {
     keyFirstChars: key.slice(0, 30),
     keyLastChars: key.slice(-30),
     docId: GOOGLE_DOC_ID ? 'set' : 'missing',
+    docInfo,
   }));
 }
 
 http
-  .createServer((req, res) => {
+  .createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
 
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       proxyChat(req, res);
     } else if (req.method === 'GET' && url.pathname === '/api/doc') {
-      serveDocApi(req, res);
+      await serveDocApi(req, res);
     } else if (req.method === 'GET' && url.pathname === '/api/debug') {
-      serveDebug(req, res);
+      await serveDebug(req, res);
     } else {
       serveStatic(req, res);
     }
