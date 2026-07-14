@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HiOutlineChevronDown, HiOutlineChevronRight, HiOutlineSave } from 'react-icons/hi';
+import { supabase } from '../lib/supabase';
 
 const departments = [
   'Operations',
@@ -28,19 +29,6 @@ function getSecondTuesdays(startYear, startMonth, endYear, endMonth) {
     }
   }
   return dates;
-}
-
-function loadPPTs() {
-  try {
-    const saved = localStorage.getItem('mancom-ppts');
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
-  }
-}
-
-function savePPTs(data) {
-  localStorage.setItem('mancom-ppts', JSON.stringify(data));
 }
 
 const meetings = getSecondTuesdays(2026, 1, 2026, 7).map((date, i) => {
@@ -111,12 +99,27 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
     }
     return init;
   });
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    onSave(meeting.num, form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+  useEffect(() => {
+    const saved = pptLinks[meeting.num] || {};
+    const init = {};
+    for (const dept of departments) {
+      init[dept] = saved[dept] || '';
+    }
+    setForm(init);
+  }, [pptLinks, meeting.num]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(meeting.num, form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isEditable = meeting.status === 'Completed' || meeting.status === 'Today';
@@ -166,10 +169,11 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
             <div className="flex justify-end mt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors"
+                disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors disabled:opacity-50"
               >
                 <HiOutlineSave className="w-4 h-4" />
-                {saved ? 'Saved' : 'Save'}
+                {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
               </button>
             </div>
           </td>
@@ -180,18 +184,63 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
 }
 
 export default function MancomHistoryPage() {
-  const [pptLinks, setPptLinks] = useState(loadPPTs);
+  const [pptLinks, setPptLinks] = useState({});
   const [expandedMeeting, setExpandedMeeting] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase
+        .from('mancom_ppts')
+        .select('meeting_num, links');
+
+      if (error) {
+        console.error('Failed to load PPT links:', error.message);
+      }
+
+      const map = {};
+      if (data) {
+        for (const row of data) {
+          map[row.meeting_num] = row.links;
+        }
+      }
+      setPptLinks(map);
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const handleToggle = (num) => {
     setExpandedMeeting((prev) => (prev === num ? null : num));
   };
 
-  const handleSave = (num, links) => {
-    const next = { ...pptLinks, [num]: links };
-    setPptLinks(next);
-    savePPTs(next);
+  const handleSave = async (num, links) => {
+    const { error } = await supabase
+      .from('mancom_ppts')
+      .upsert({ meeting_num: num, links, updated_at: new Date().toISOString() }, { onConflict: 'meeting_num' });
+
+    if (error) throw error;
+
+    setPptLinks((prev) => ({ ...prev, [num]: links }));
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-surface-dark">
+        <div className="border-b border-surface-border px-4 py-3">
+          <div className="max-w-5xl mx-auto">
+            <div className="h-3 w-36 bg-surface-input rounded animate-pulse" />
+            <div className="h-6 w-48 bg-surface-input rounded animate-pulse mt-2" />
+            <div className="h-4 w-72 bg-surface-input rounded animate-pulse mt-2" />
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 py-6 space-y-8">
+          <div className="h-64 bg-surface-input rounded animate-pulse" />
+          <div className="h-64 bg-surface-input rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface-dark">
