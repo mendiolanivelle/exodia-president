@@ -142,7 +142,7 @@ async function fetchDocContent() {
   });
 
   const docs = google.docs({ version: 'v1', auth });
-  const res = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
+  const res = await docs.documents.get({ documentId: GOOGLE_DOC_ID, includeTabsContent: true });
   const content = transformDoc(res.data);
 
   docCache = { data: content, ts: Date.now() };
