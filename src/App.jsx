@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import DocPage from './components/DocPage';
 import MancomHistoryPage from './components/MancomHistoryPage';
+import MancomCronPage from './components/MancomCronPage';
 import SettingsModal from './components/SettingsModal';
 import Toast from './components/Toast';
 import { useChat } from './hooks/useChat';
@@ -51,6 +52,8 @@ export default function App() {
           <DocPage />
         ) : activeView === 'mancom-history' ? (
           <MancomHistoryPage />
+        ) : activeView === 'mancom-cron' ? (
+          <MancomCronPage />
         ) : (
           <ChatArea
             messages={messages}
