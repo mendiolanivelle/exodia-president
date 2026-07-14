@@ -3,12 +3,16 @@ import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { google } from 'googleapis';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 const DIST = path.join(__dirname, 'dist');
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'openai/gpt-4o-mini';
+const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL || '';
+const GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const GOOGLE_DOC_ID = process.env.GOOGLE_DOC_ID || '';
 
 const SYSTEM_PROMPT =
   'You are the President of Exodia, a visionary leader overseeing game development, technology, and innovation. ' +
@@ -31,6 +35,85 @@ const MIME = {
   '.ttf': 'font/ttf',
   '.eot': 'application/vnd.ms-fontobject',
 };
+
+function parseTable(table) {
+  const rows = [];
+  for (const row of table.tableRows || []) {
+    const cells = [];
+    for (const cell of row.tableCells || []) {
+      const text = (cell.content || [])
+        .map((el) => (el.paragraph?.elements || [])
+          .map((e) => e.textRun?.content || '')
+          .join(''))
+        .join('')
+        .trim();
+      cells.push(text);
+    }
+    if (cells.some((c) => c)) rows.push(cells);
+  }
+  return rows;
+}
+
+function transformDoc(doc) {
+  const sections = [];
+  const content = doc.body?.content || [];
+
+  for (const el of content) {
+    if (el.paragraph) {
+      const para = el.paragraph;
+      const text = (para.elements || [])
+        .map((e) => e.textRun?.content || '')
+        .join('')
+        .trim();
+      if (!text) {
+        sections.push({ type: 'break' });
+        continue;
+      }
+
+      const style = para.paragraphStyle?.namedStyleType;
+      if (style === 'HEADING_1') sections.push({ type: 'h1', text });
+      else if (style === 'HEADING_2') sections.push({ type: 'h2', text });
+      else if (style === 'HEADING_3') sections.push({ type: 'h3', text });
+      else if (para.bullet) sections.push({ type: 'bullet', text });
+      else sections.push({ type: 'p', text });
+    }
+    if (el.table) {
+      sections.push({ type: 'table', rows: parseTable(el.table) });
+    }
+  }
+
+  return {
+    title: doc.title || '',
+    sections,
+  };
+}
+
+let docCache = { data: null, ts: 0 };
+
+async function fetchDocContent() {
+  if (docCache.data && Date.now() - docCache.ts < 30_000) {
+    return docCache.data;
+  }
+
+  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_DOC_ID) {
+    throw new Error('Google Doc configuration missing on server.');
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: GOOGLE_CLIENT_EMAIL,
+      private_key: GOOGLE_PRIVATE_KEY,
+    },
+    scopes: ['https://www.googleapis.com/auth/documents.readonly'],
+  });
+
+  const docs = google.docs({ version: 'v1', auth });
+  const res = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
+  const content = transformDoc(res.data);
+
+  docCache = { data: content, ts: Date.now() };
+  return content;
+}
 
 function serveStatic(req, res) {
   const urlPath = new URL(req.url, `http://localhost:${PORT}`).pathname;
@@ -127,12 +210,25 @@ function proxyChat(req, res) {
   });
 }
 
+async function serveDocApi(req, res) {
+  try {
+    const content = await fetchDocContent();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(content));
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
 http
   .createServer((req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
 
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       proxyChat(req, res);
+    } else if (req.method === 'GET' && url.pathname === '/api/doc') {
+      serveDocApi(req, res);
     } else {
       serveStatic(req, res);
     }
