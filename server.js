@@ -1,7 +1,9 @@
 import http from 'node:http';
 import https from 'node:https';
 import crypto from 'node:crypto';
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { google } from 'googleapis';
@@ -109,22 +111,15 @@ async function fetchDocContent() {
   try {
     crypto.createPrivateKey(key);
   } catch {
-    const pkcs1 = key
-      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN RSA PRIVATE KEY-----')
-      .replace('-----END PRIVATE KEY-----', '-----END RSA PRIVATE KEY-----');
+    const tmpPath = path.join(os.tmpdir(), `exodia-key-${Date.now()}.pem`);
     try {
-      crypto.createPrivateKey(pkcs1);
-      keyToUse = pkcs1;
-    } catch {
-      const pkcs8 = key
-        .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----')
-        .replace('-----END RSA PRIVATE KEY-----', '-----END PRIVATE KEY-----');
-      try {
-        crypto.createPrivateKey(pkcs8);
-        keyToUse = pkcs8;
-      } catch {
-        throw new Error('Private key format is unsupported by this Node.js version.');
-      }
+      fs.writeFileSync(tmpPath, key);
+      keyToUse = execSync(`openssl pkey -in "${tmpPath}" -outform pem`, { encoding: 'utf8' }).trim();
+      crypto.createPrivateKey(keyToUse);
+    } catch (opensslErr) {
+      throw new Error(`Key conversion failed: ${opensslErr.message}`);
+    } finally {
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
     }
   }
 
@@ -267,16 +262,17 @@ function serveDebug(req, res) {
   let keyStatus = 'missing';
   try {
     crypto.createPrivateKey(key);
-    keyStatus = 'valid (pkcs8)';
+    keyStatus = 'valid (native)';
   } catch {
     try {
-      const pkcs1 = key
-        .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN RSA PRIVATE KEY-----')
-        .replace('-----END PRIVATE KEY-----', '-----END RSA PRIVATE KEY-----');
-      crypto.createPrivateKey(pkcs1);
-      keyStatus = 'valid (pkcs1)';
-    } catch {
-      keyStatus = `invalid: both pkcs8 and pkcs1 failed`;
+      const tmpPath = path.join(os.tmpdir(), `exodia-debug-${Date.now()}.pem`);
+      fs.writeFileSync(tmpPath, key);
+      const converted = execSync(`openssl pkey -in "${tmpPath}" -outform pem`, { encoding: 'utf8' }).trim();
+      fs.unlinkSync(tmpPath);
+      crypto.createPrivateKey(converted);
+      keyStatus = 'valid (openssl converted)';
+    } catch (e) {
+      keyStatus = `invalid: ${e.message.slice(0, 100)}`;
     }
   }
 
