@@ -13,7 +13,7 @@ const departments = [
   'Sales',
 ];
 
-function computeMeetings(dates) {
+function computeMeetings(dates, daysBefore = 0, daysAfter = 0) {
   return dates.map((date, i) => {
     const num = i + 1;
     const monthIndex = date.getMonth();
@@ -26,15 +26,28 @@ function computeMeetings(dates) {
     });
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const isPast = date <= today;
-    const isToday = date.getTime() === today.getTime();
+    const meetingDate = new Date(date);
+    meetingDate.setHours(0, 0, 0, 0);
+
+    const openStart = new Date(meetingDate);
+    openStart.setDate(openStart.getDate() - daysBefore);
+    const openEnd = new Date(meetingDate);
+    openEnd.setDate(openEnd.getDate() + daysAfter);
+
+    let status;
+    if (today < openStart) {
+      status = 'Upcoming';
+    } else if (today <= openEnd) {
+      status = 'Open';
+    } else {
+      status = 'Completed';
+    }
 
     return {
       num,
       quarter,
       date: formatted,
-      status: isToday ? 'Today' : isPast ? 'Completed' : 'Upcoming',
-      isPast,
+      status,
     };
   });
 }
@@ -59,12 +72,12 @@ const quarterLabels = {
 const statusBadge = (status) => {
   const colors = {
     Completed: 'bg-green-500/10 text-green-400 border border-green-500/30',
-    Today: 'bg-brand-orange/10 text-brand-orange border border-brand-orange/30',
+    Open: 'bg-brand-orange/10 text-brand-orange border border-brand-orange/30',
     Upcoming: 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/30',
   };
   const dots = {
     Completed: 'bg-green-400',
-    Today: 'bg-brand-orange',
+    Open: 'bg-brand-orange',
     Upcoming: 'bg-zinc-500',
   };
   return (
@@ -109,8 +122,8 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
     }
   };
 
-  const isEditable = meeting.status === 'Today';
-  const isViewable = meeting.status === 'Completed' || meeting.status === 'Today';
+  const isEditable = meeting.status === 'Open';
+  const isViewable = meeting.status === 'Completed' || meeting.status === 'Open';
 
   return (
     <>
@@ -182,9 +195,9 @@ export default function MancomHistoryPage() {
 
   useEffect(() => {
     async function load() {
-      const [pptsResult, datesResult] = await Promise.all([
+      const [pptsResult, cronResult] = await Promise.all([
         supabase.from('mancom_ppts').select('meeting_num, links'),
-        supabase.from('mancom_cron').select('dates').eq('id', 1).single(),
+        supabase.from('mancom_cron').select('dates, days_before, days_after').eq('id', 1).single(),
       ]);
 
       const map = {};
@@ -196,12 +209,16 @@ export default function MancomHistoryPage() {
       setPptLinks(map);
 
       let dates = [];
-      if (datesResult.data?.dates && datesResult.data.dates.length > 0) {
-        dates = datesResult.data.dates.map((d) => new Date(d + 'T00:00:00'));
+      let daysBefore = 0;
+      let daysAfter = 0;
+      if (cronResult.data?.dates && cronResult.data.dates.length > 0) {
+        dates = cronResult.data.dates.map((d) => new Date(d + 'T00:00:00'));
+        daysBefore = cronResult.data.days_before ?? 0;
+        daysAfter = cronResult.data.days_after ?? 0;
       } else {
         dates = await getMancomDates();
       }
-      setMeetings(computeMeetings(dates));
+      setMeetings(computeMeetings(dates, daysBefore, daysAfter));
 
       setLoading(false);
     }
@@ -261,7 +278,7 @@ export default function MancomHistoryPage() {
             Mancom History
           </h1>
           <p className="text-sm text-zinc-400 mt-2">
-            Scheduled every 2nd Tuesday of the month. Click a completed meeting to manage department PPT links.
+            Scheduled every 2nd Tuesday of the month. Click an Open meeting to manage department PPT links.
           </p>
         </div>
       </div>

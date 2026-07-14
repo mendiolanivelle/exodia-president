@@ -6,6 +6,8 @@ import { getDefaultDates } from '../lib/mancomDates';
 const defaultConfig = {
   emails: [],
   dates: getDefaultDates(),
+  daysBefore: 3,
+  daysAfter: 3,
   upcomingTemplate: {
     subject: 'Upcoming Mancom Meeting — {{date}}',
     body: 'Dear team,\n\nThis is a reminder that the Management Committee Meeting will be held on {{date}}.\n\nPlease prepare your department updates.\n\nBest regards,\nMancom Secretariat',
@@ -38,6 +40,8 @@ export default function MancomCronPage() {
         setConfig({
           emails: data.emails || [],
           dates: (data.dates && data.dates.length > 0) ? data.dates : getDefaultDates(),
+          daysBefore: data.days_before ?? 3,
+          daysAfter: data.days_after ?? 3,
           upcomingTemplate: data.upcoming_template?.subject
             ? data.upcoming_template
             : defaultConfig.upcomingTemplate,
@@ -55,19 +59,21 @@ export default function MancomCronPage() {
   useEffect(() => {
     if (!loadedRef.current) return;
     clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      saveNow(config.emails, config.dates, config.upcomingTemplate, config.followUpTemplate);
+saveTimerRef.current = setTimeout(() => {
+      saveNow(config.emails, config.dates, config.daysBefore, config.daysAfter, config.upcomingTemplate, config.followUpTemplate);
     }, 800);
     return () => clearTimeout(saveTimerRef.current);
   }, [config]);
 
-  const saveNow = async (emails, dates, upcomingTemplate, followUpTemplate) => {
+  const saveNow = async (emails, dates, daysBefore, daysAfter, upcomingTemplate, followUpTemplate) => {
     const { error } = await supabase
       .from('mancom_cron')
       .upsert({
         id: 1,
         emails,
         dates,
+        days_before: daysBefore,
+        days_after: daysAfter,
         upcoming_template: upcomingTemplate,
         follow_up_template: followUpTemplate,
         updated_at: new Date().toISOString(),
@@ -104,7 +110,7 @@ export default function MancomCronPage() {
   const saveDate = () => {
     clearTimeout(saveTimerRef.current);
     const c = configRef.current;
-    saveNow(c.emails, c.dates, c.upcomingTemplate, c.followUpTemplate);
+    saveNow(c.emails, c.dates, c.daysBefore, c.daysAfter, c.upcomingTemplate, c.followUpTemplate);
   };
 
   const updateTemplate = (key, field, value) => {
@@ -219,6 +225,37 @@ export default function MancomCronPage() {
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        <section className="bg-surface-card border border-surface-border rounded-lg p-5">
+          <h2 className="text-lg font-semibold text-white mb-4">Days Setting</h2>
+          <p className="text-sm text-zinc-400 mb-4">
+            Control how many days before and after a Mancom date the meeting is <span className="text-brand-orange">Open</span> for editing in the History page.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>Days Before</label>
+              <p className="text-xs text-zinc-500 mb-2">Meeting becomes editable this many days before the date.</p>
+              <input
+                type="number"
+                min="0"
+                value={config.daysBefore}
+                onChange={(e) => setConfig((prev) => ({ ...prev, daysBefore: parseInt(e.target.value) || 0 }))}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Days After</label>
+              <p className="text-xs text-zinc-500 mb-2">Meeting remains editable this many days after the date.</p>
+              <input
+                type="number"
+                min="0"
+                value={config.daysAfter}
+                onChange={(e) => setConfig((prev) => ({ ...prev, daysAfter: parseInt(e.target.value) || 0 }))}
+                className={inputClass}
+              />
+            </div>
           </div>
         </section>
 
