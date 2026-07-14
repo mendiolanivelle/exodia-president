@@ -1,18 +1,6 @@
 import { useState } from 'react';
 import { HiOutlineTrash, HiOutlinePlus, HiOutlineSave } from 'react-icons/hi';
-
-function getSecondTuesdays() {
-  const dates = [];
-  for (let month = 1; month <= 12; month++) {
-    const firstDay = new Date(2026, month - 1, 1);
-    const dayOfWeek = firstDay.getDay();
-    const daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
-    const secondTuesday = 7 + daysUntilTuesday + 1;
-    const d = new Date(2026, month - 1, secondTuesday);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
+import { getDefaultDates } from '../lib/mancomDates';
 
 function loadConfig() {
   try {
@@ -21,7 +9,7 @@ function loadConfig() {
   } catch { /* ignore */ }
   return {
     emails: [],
-    dates: getSecondTuesdays(),
+    dates: getDefaultDates(),
     upcomingTemplate: {
       subject: 'Upcoming Mancom Meeting — {{date}}',
       body: 'Dear team,\n\nThis is a reminder that the Management Committee Meeting will be held on {{date}}.\n\nPlease prepare your department updates.\n\nBest regards,\nMancom Secretariat',

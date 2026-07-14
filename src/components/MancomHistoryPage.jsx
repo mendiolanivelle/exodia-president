@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HiOutlineChevronDown, HiOutlineChevronRight, HiOutlineSave } from 'react-icons/hi';
 import { supabase } from '../lib/supabase';
+import { getMancomDates } from '../lib/mancomDates';
 
 const departments = [
   'Operations',
@@ -12,54 +13,40 @@ const departments = [
   'Sales',
 ];
 
-function getSecondTuesdays(startYear, startMonth, endYear, endMonth) {
-  const dates = [];
-  let year = startYear;
-  let month = startMonth;
-  while (year < endYear || (year === endYear && month <= endMonth)) {
-    const firstDay = new Date(year, month - 1, 1);
-    const dayOfWeek = firstDay.getDay();
-    const daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
-    const secondTuesday = 7 + daysUntilTuesday + 1;
-    dates.push(new Date(year, month - 1, secondTuesday));
-    month++;
-    if (month > 12) {
-      month = 1;
-      year++;
-    }
-  }
-  return dates;
+function computeMeetings() {
+  return getMancomDates().map((date, i) => {
+    const num = i + 1;
+    const monthIndex = date.getMonth();
+    const quarter = Math.floor(monthIndex / 3) + 1;
+    const formatted = date.toLocaleDateString('en-PH', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPast = date <= today;
+    const isToday = date.getTime() === today.getTime();
+
+    return {
+      num,
+      quarter,
+      date: formatted,
+      status: isToday ? 'Today' : isPast ? 'Completed' : 'Upcoming',
+      isPast,
+    };
+  });
 }
 
-const meetings = getSecondTuesdays(2026, 1, 2026, 7).map((date, i) => {
-  const num = i + 1;
-  const monthIndex = date.getMonth();
-  const quarter = Math.floor(monthIndex / 3) + 1;
-  const formatted = date.toLocaleDateString('en-PH', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const isPast = date <= today;
-  const isToday = date.getTime() === today.getTime();
-
-  return {
-    num,
-    quarter,
-    date: formatted,
-    status: isToday ? 'Today' : isPast ? 'Completed' : 'Upcoming',
-    isPast,
-  };
-});
-
-const quarters = {};
-for (const m of meetings) {
-  const q = `Q${m.quarter} 2026`;
-  if (!quarters[q]) quarters[q] = [];
-  quarters[q].push(m);
+function computeQuarters(meetings) {
+  const q = {};
+  for (const m of meetings) {
+    const key = `Q${m.quarter} 2026`;
+    if (!q[key]) q[key] = [];
+    q[key].push(m);
+  }
+  return q;
 }
 
 const quarterLabels = {
@@ -253,6 +240,9 @@ export default function MancomHistoryPage() {
       </div>
     );
   }
+
+  const meetings = computeMeetings();
+  const quarters = computeQuarters(meetings);
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface-dark">
