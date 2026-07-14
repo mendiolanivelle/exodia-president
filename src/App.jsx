@@ -1,9 +1,6 @@
 import { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
-import GuidePage from './components/GuidePage';
-import ObjectionAssistantPage from './components/ObjectionAssistantPage';
-import TesdaAiCoursePage from './components/TesdaAiCoursePage';
 import SettingsModal from './components/SettingsModal';
 import Toast from './components/Toast';
 import { useChat } from './hooks/useChat';
@@ -11,7 +8,6 @@ import { useChat } from './hooks/useChat';
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeView, setActiveView] = useState('chat');
   const {
     messages,
     isStreaming,
@@ -36,8 +32,6 @@ export default function App() {
     <div className="h-screen flex bg-surface-dark text-white overflow-hidden">
       <Sidebar
         isOpen={sidebarOpen}
-        activeView={activeView}
-        onSelectView={setActiveView}
         onToggle={() => setSidebarOpen((v) => !v)}
         onNewChat={handleNewChat}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -48,20 +42,12 @@ export default function App() {
           sidebarOpen ? 'lg:ml-72' : 'ml-0'
         }`}
       >
-        {activeView === 'guide' ? (
-          <GuidePage />
-        ) : activeView === 'objections' ? (
-          <ObjectionAssistantPage />
-        ) : activeView === 'tesda-ai' ? (
-          <TesdaAiCoursePage />
-        ) : (
-          <ChatArea
-            messages={messages}
-            isStreaming={isStreaming}
-            onSend={send}
-            onPromptClick={handlePromptClick}
-          />
-        )}
+        <ChatArea
+          messages={messages}
+          isStreaming={isStreaming}
+          onSend={send}
+          onPromptClick={handlePromptClick}
+        />
       </main>
 
       <SettingsModal

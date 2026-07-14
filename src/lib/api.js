@@ -1,9 +1,9 @@
 export async function sendMessage(messages, options = {}) {
-  const { signal, ...rest } = options;
+  const { signal } = options;
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, ...rest }),
+    body: JSON.stringify({ messages }),
     signal: signal || (AbortSignal.timeout ? AbortSignal.timeout(120000) : undefined),
   });
 
