@@ -1,3 +1,16 @@
+import { useState } from 'react';
+import { HiOutlineChevronDown, HiOutlineChevronRight, HiOutlineSave } from 'react-icons/hi';
+
+const departments = [
+  'Operations',
+  'IT',
+  'Facility',
+  'Finance',
+  'Human Resource',
+  'Marketing',
+  'Sales',
+];
+
 function getSecondTuesdays(startYear, startMonth, endYear, endMonth) {
   const dates = [];
   let year = startYear;
@@ -15,6 +28,19 @@ function getSecondTuesdays(startYear, startMonth, endYear, endMonth) {
     }
   }
   return dates;
+}
+
+function loadPPTs() {
+  try {
+    const saved = localStorage.getItem('mancom-ppts');
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePPTs(data) {
+  localStorage.setItem('mancom-ppts', JSON.stringify(data));
 }
 
 const meetings = getSecondTuesdays(2026, 1, 2026, 7).map((date, i) => {
@@ -37,6 +63,7 @@ const meetings = getSecondTuesdays(2026, 1, 2026, 7).map((date, i) => {
     quarter,
     date: formatted,
     status: isToday ? 'Today' : isPast ? 'Completed' : 'Upcoming',
+    isPast,
   };
 });
 
@@ -73,7 +100,99 @@ const statusBadge = (status) => {
   );
 };
 
+const inputClass = 'w-full rounded-lg border border-surface-border bg-surface-input px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-brand-orange';
+
+function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
+  const [form, setForm] = useState(() => {
+    const saved = pptLinks[meeting.num] || {};
+    const init = {};
+    for (const dept of departments) {
+      init[dept] = saved[dept] || '';
+    }
+    return init;
+  });
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    onSave(meeting.num, form);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  const isEditable = meeting.status === 'Completed' || meeting.status === 'Today';
+
+  return (
+    <>
+      <tr
+        onClick={isEditable ? onToggle : undefined}
+        className={`border-t border-surface-border transition-colors ${
+          isEditable ? 'cursor-pointer hover:bg-surface-input' : ''
+        } ${isExpanded ? 'bg-surface-input/50' : ''}`}
+      >
+        <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
+          {String(meeting.num).padStart(2, '0')}
+        </td>
+        <td className="px-4 py-3 text-zinc-200 font-medium flex items-center gap-2">
+          {meeting.date}
+          {isEditable && (
+            isExpanded
+              ? <HiOutlineChevronDown className="w-4 h-4 text-zinc-500" />
+              : <HiOutlineChevronRight className="w-4 h-4 text-zinc-500" />
+          )}
+        </td>
+        <td className="px-4 py-3">
+          {statusBadge(meeting.status)}
+        </td>
+      </tr>
+      {isExpanded && isEditable && (
+        <tr>
+          <td colSpan={3} className="px-4 py-4 bg-surface-input/30">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {departments.map((dept) => (
+                <div key={dept}>
+                  <label className="block text-xs uppercase tracking-wider text-zinc-400 font-semibold mb-1.5">
+                    {dept}
+                  </label>
+                  <input
+                    type="text"
+                    value={form[dept]}
+                    onChange={(e) => setForm({ ...form, [dept]: e.target.value })}
+                    placeholder="PPT link..."
+                    className={inputClass}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors"
+              >
+                <HiOutlineSave className="w-4 h-4" />
+                {saved ? 'Saved' : 'Save'}
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 export default function MancomHistoryPage() {
+  const [pptLinks, setPptLinks] = useState(loadPPTs);
+  const [expandedMeeting, setExpandedMeeting] = useState(null);
+
+  const handleToggle = (num) => {
+    setExpandedMeeting((prev) => (prev === num ? null : num));
+  };
+
+  const handleSave = (num, links) => {
+    const next = { ...pptLinks, [num]: links };
+    setPptLinks(next);
+    savePPTs(next);
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-surface-dark">
       <div className="border-b border-surface-border px-4 py-3">
@@ -85,7 +204,7 @@ export default function MancomHistoryPage() {
             Mancom History
           </h1>
           <p className="text-sm text-zinc-400 mt-2">
-            Scheduled every 2nd Tuesday of the month. Started January 2026.
+            Scheduled every 2nd Tuesday of the month. Click a completed meeting to manage department PPT links.
           </p>
         </div>
       </div>
@@ -119,20 +238,14 @@ export default function MancomHistoryPage() {
                 </thead>
                 <tbody>
                   {items.map((m) => (
-                    <tr
+                    <MeetingRow
                       key={m.num}
-                      className="border-t border-surface-border hover:bg-surface-input transition-colors"
-                    >
-                      <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
-                        {String(m.num).padStart(2, '0')}
-                      </td>
-                      <td className="px-4 py-3 text-zinc-200 font-medium">
-                        {m.date}
-                      </td>
-                      <td className="px-4 py-3">
-                        {statusBadge(m.status)}
-                      </td>
-                    </tr>
+                      meeting={m}
+                      isExpanded={expandedMeeting === m.num}
+                      onToggle={() => handleToggle(m.num)}
+                      pptLinks={pptLinks}
+                      onSave={handleSave}
+                    />
                   ))}
                 </tbody>
               </table>
