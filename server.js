@@ -105,10 +105,33 @@ async function fetchDocContent() {
     .replace(/\\r/g, '')
     .trim();
 
+  let keyToUse = key;
+  try {
+    crypto.createPrivateKey(key);
+  } catch {
+    const pkcs1 = key
+      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN RSA PRIVATE KEY-----')
+      .replace('-----END PRIVATE KEY-----', '-----END RSA PRIVATE KEY-----');
+    try {
+      crypto.createPrivateKey(pkcs1);
+      keyToUse = pkcs1;
+    } catch {
+      const pkcs8 = key
+        .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----')
+        .replace('-----END RSA PRIVATE KEY-----', '-----END PRIVATE KEY-----');
+      try {
+        crypto.createPrivateKey(pkcs8);
+        keyToUse = pkcs8;
+      } catch {
+        throw new Error('Private key format is unsupported by this Node.js version.');
+      }
+    }
+  }
+
   const jwt = new google.auth.JWT(
     GOOGLE_CLIENT_EMAIL,
     null,
-    key,
+    keyToUse,
     ['https://www.googleapis.com/auth/documents.readonly'],
   );
 
@@ -244,9 +267,17 @@ function serveDebug(req, res) {
   let keyStatus = 'missing';
   try {
     crypto.createPrivateKey(key);
-    keyStatus = 'valid';
-  } catch (e) {
-    keyStatus = `invalid: ${e.message}`;
+    keyStatus = 'valid (pkcs8)';
+  } catch {
+    try {
+      const pkcs1 = key
+        .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN RSA PRIVATE KEY-----')
+        .replace('-----END PRIVATE KEY-----', '-----END RSA PRIVATE KEY-----');
+      crypto.createPrivateKey(pkcs1);
+      keyStatus = 'valid (pkcs1)';
+    } catch {
+      keyStatus = `invalid: both pkcs8 and pkcs1 failed`;
+    }
   }
 
   res.writeHead(200, { 'Content-Type': 'application/json' });

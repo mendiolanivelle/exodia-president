@@ -19,7 +19,7 @@ function LoadingSkeleton() {
   );
 }
 
-function ErrorState({ message }) {
+function ErrorState({ message, debug }) {
   return (
     <div className="flex-1 flex items-center justify-center bg-surface-dark px-4">
       <div className="text-center max-w-lg">
@@ -31,6 +31,14 @@ function ErrorState({ message }) {
           <p className="text-xs uppercase tracking-wider text-red-400 font-semibold mb-1">Server Error</p>
           <p className="text-sm text-red-200 font-mono break-all">{message}</p>
         </div>
+        {debug && (
+          <div className="rounded-lg bg-surface-input border border-surface-border p-4 mt-4 text-left">
+            <p className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2">Key Diagnostics</p>
+            <pre className="text-xs text-zinc-300 font-mono leading-relaxed">
+              {JSON.stringify(debug, null, 2)}
+            </pre>
+          </div>
+        )}
         <p className="text-xs text-zinc-500 mt-4">
           Verify GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_DOC_ID are set in Coolify.
           Make sure the service account has Viewer access to the Google Doc.
@@ -117,32 +125,40 @@ export default function DocPage() {
   const [doc, setDoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [debug, setDebug] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/doc')
-      .then(async (r) => {
+
+    async function load() {
+      try {
+        const r = await fetch('/api/doc');
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
           throw new Error(err.error || `Server error: ${r.status}`);
         }
-        return r.json();
-      })
-      .then((data) => {
+        const data = await r.json();
         if (!cancelled) setDoc(data);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (!cancelled) setError(e.message || 'Failed to load document.');
-      })
-      .finally(() => {
+        try {
+          const dr = await fetch('/api/debug');
+          const dd = await dr.json();
+          if (!cancelled) setDebug(dd);
+        } catch {
+          // ignore
+        }
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    }
 
+    load();
     return () => { cancelled = true; };
   }, []);
 
   if (loading) return <LoadingSkeleton />;
-  if (error) return <ErrorState message={error} />;
+  if (error) return <ErrorState message={error} debug={debug} />;
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface-dark">
