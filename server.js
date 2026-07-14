@@ -97,8 +97,10 @@ function getKeyJsonPath() {
   if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) return null;
 
   const key = GOOGLE_PRIVATE_KEY
+    .replace(/\\\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '')
+    .replace(/\\$/gm, '')
     .trim();
 
   const json = {
@@ -246,8 +248,10 @@ async function serveDocApi(req, res) {
 
 function serveDebug(req, res) {
   const key = GOOGLE_PRIVATE_KEY
+    .replace(/\\\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '')
+    .replace(/\\$/gm, '')
     .trim();
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
