@@ -281,6 +281,22 @@ async function serveDebug(req, res) {
           topLevelKeys: Object.keys(data),
           hasBody: !!data.body,
           bodyContentCount: data.body?.content?.length || 0,
+          bodyPreview: (data.body?.content || []).slice(0, 20).map((el) => {
+            if (el.paragraph) {
+              const text = (el.paragraph.elements || [])
+                .map((e) => e.textRun?.content || '')
+                .join('')
+                .trim();
+              return {
+                type: el.paragraph.paragraphStyle?.namedStyleType || 'NORMAL_TEXT',
+                hasBullet: !!el.paragraph.bullet,
+                text: text.slice(0, 100),
+                hasLink: (el.paragraph.elements || []).some((e) => e.textRun?.textStyle?.link),
+              };
+            }
+            if (el.table) return { type: 'TABLE', rows: el.table.tableRows?.length || 0 };
+            return { type: 'OTHER' };
+          }),
           hasTabs: !!data.tabs,
           tabCount: data.tabs?.length || 0,
           tabs: (data.tabs || []).map((t) => ({
