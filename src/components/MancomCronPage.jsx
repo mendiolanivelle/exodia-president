@@ -53,34 +53,44 @@ export default function MancomCronPage() {
   useEffect(() => {
     if (!loadedRef.current) return;
     clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      const { error } = await supabase
-        .from('mancom_cron')
-        .upsert({
-          id: 1,
-          emails: config.emails,
-          dates: config.dates,
-          upcoming_template: config.upcomingTemplate,
-          follow_up_template: config.followUpTemplate,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-      if (!error) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 1500);
-      }
+    saveTimerRef.current = setTimeout(() => {
+      saveNow(config.emails, config.dates, config.upcomingTemplate, config.followUpTemplate);
     }, 800);
     return () => clearTimeout(saveTimerRef.current);
   }, [config]);
 
+  const saveNow = async (emails, dates, upcomingTemplate, followUpTemplate) => {
+    const { error } = await supabase
+      .from('mancom_cron')
+      .upsert({
+        id: 1,
+        emails,
+        dates,
+        upcoming_template: upcomingTemplate,
+        follow_up_template: followUpTemplate,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }
+  };
+
   const addEmail = () => {
     const email = emailInput.trim();
     if (!email || !email.includes('@') || config.emails.includes(email)) return;
-    setConfig((prev) => ({ ...prev, emails: [...prev.emails, email] }));
+    const emails = [...config.emails, email];
+    setConfig((prev) => ({ ...prev, emails }));
     setEmailInput('');
+    clearTimeout(saveTimerRef.current);
+    saveNow(emails, config.dates, config.upcomingTemplate, config.followUpTemplate);
   };
 
   const removeEmail = (email) => {
-    setConfig((prev) => ({ ...prev, emails: prev.emails.filter((e) => e !== email) }));
+    const emails = config.emails.filter((e) => e !== email);
+    setConfig((prev) => ({ ...prev, emails }));
+    clearTimeout(saveTimerRef.current);
+    saveNow(emails, config.dates, config.upcomingTemplate, config.followUpTemplate);
   };
 
   const updateDate = (i, value) => {
