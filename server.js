@@ -303,7 +303,24 @@ async function serveDebug(req, res) {
             tabId: t.tabId,
             title: t.tabProperties?.title,
             hasBody: !!t.body,
-            contentCount: t.body?.content?.length || 0,
+            bodyContentCount: t.body?.content?.length || 0,
+            bodyKeys: t.body ? Object.keys(t.body) : [],
+            tabKeys: t.tabProperties ? Object.keys(t.tabProperties) : [],
+            allKeys: Object.keys(t),
+            bodyPreview: (t.body?.content || []).slice(0, 5).map((el) => {
+              if (el.paragraph) {
+                const text = (el.paragraph.elements || [])
+                  .map((e) => e.textRun?.content || '')
+                  .join('')
+                  .trim();
+                return {
+                  type: el.paragraph.paragraphStyle?.namedStyleType || 'NORMAL_TEXT',
+                  text: text.slice(0, 80),
+                };
+              }
+              if (el.table) return { type: 'TABLE', rows: el.table.tableRows?.length || 0 };
+              return { type: 'OTHER' };
+            }),
           })),
         };
       }
