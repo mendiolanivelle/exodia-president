@@ -86,12 +86,26 @@ export default function Sidebar({
           </button>
 
           {mancomExpanded && (
-            <button
-              onClick={() => onSelectView('doc')}
-              className={subItemClass('doc')}
-            >
-              Mancom Program Template
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={() => onSelectView('doc')}
+                className={subItemClass('doc')}
+              >
+                Mancom Program Template
+              </button>
+              <button
+                onClick={() => onSelectView('mancom-history')}
+                className={subItemClass('mancom-history')}
+              >
+                Mancom History List
+              </button>
+              <button
+                onClick={() => onSelectView('mancom-cron')}
+                className={subItemClass('mancom-cron')}
+              >
+                Mancom Cron Job
+              </button>
+            </div>
           )}
 
           <button
