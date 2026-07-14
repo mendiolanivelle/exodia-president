@@ -1,6 +1,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { google } from 'googleapis';
@@ -11,7 +12,7 @@ const DIST = path.join(__dirname, 'dist');
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'openai/gpt-4o-mini';
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL || '';
-const GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY || '';
 const GOOGLE_DOC_ID = process.env.GOOGLE_DOC_ID || '';
 
 const SYSTEM_PROMPT =
@@ -89,6 +90,16 @@ function transformDoc(doc) {
 }
 
 let docCache = { data: null, ts: 0 };
+let keyFilePath = null;
+
+function getKeyFile() {
+  if (keyFilePath) return keyFilePath;
+  if (!GOOGLE_PRIVATE_KEY) return null;
+  const keyContent = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
+  keyFilePath = path.join(os.tmpdir(), `exodia-gkey-${Date.now()}.pem`);
+  fs.writeFileSync(keyFilePath, keyContent);
+  return keyFilePath;
+}
 
 async function fetchDocContent() {
   if (docCache.data && Date.now() - docCache.ts < 30_000) {
@@ -99,11 +110,11 @@ async function fetchDocContent() {
     throw new Error('Google Doc configuration missing on server.');
   }
 
+  const keyFile = getKeyFile();
+  if (!keyFile) throw new Error('Failed to write private key file.');
+
   const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: GOOGLE_CLIENT_EMAIL,
-      private_key: GOOGLE_PRIVATE_KEY,
-    },
+    keyFile,
     scopes: ['https://www.googleapis.com/auth/documents.readonly'],
   });
 
