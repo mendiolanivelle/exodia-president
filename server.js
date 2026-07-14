@@ -278,7 +278,7 @@ async function serveDebug(req, res) {
           scopes: ['https://www.googleapis.com/auth/documents.readonly'],
         });
         const docs = google.docs({ version: 'v1', auth });
-        const doc = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
+        const doc = await docs.documents.get({ documentId: GOOGLE_DOC_ID, includeTabsContent: true });
         const data = doc.data;
         docInfo = {
           title: data.title,
