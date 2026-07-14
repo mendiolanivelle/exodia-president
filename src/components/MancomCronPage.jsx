@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { HiOutlineTrash, HiOutlinePlus, HiOutlineSave } from 'react-icons/hi';
+import { useState, useEffect, useRef } from 'react';
+import { HiOutlineTrash, HiOutlinePlus } from 'react-icons/hi';
 import { supabase } from '../lib/supabase';
 import { getDefaultDates } from '../lib/mancomDates';
 
@@ -19,9 +19,10 @@ const defaultConfig = {
 export default function MancomCronPage() {
   const [config, setConfig] = useState(defaultConfig);
   const [emailInput, setEmailInput] = useState('');
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const loadedRef = useRef(false);
+  const saveTimerRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -43,10 +44,33 @@ export default function MancomCronPage() {
             : defaultConfig.followUpTemplate,
         });
       }
+      loadedRef.current = true;
       setLoading(false);
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      const { error } = await supabase
+        .from('mancom_cron')
+        .upsert({
+          id: 1,
+          emails: config.emails,
+          dates: config.dates,
+          upcoming_template: config.upcomingTemplate,
+          follow_up_template: config.followUpTemplate,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+      if (!error) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      }
+    }, 800);
+    return () => clearTimeout(saveTimerRef.current);
+  }, [config]);
 
   const addEmail = () => {
     const email = emailInput.trim();
@@ -70,28 +94,6 @@ export default function MancomCronPage() {
       ...prev,
       [key]: { ...prev[key], [field]: value },
     }));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from('mancom_cron')
-      .upsert({
-        id: 1,
-        emails: config.emails,
-        dates: config.dates,
-        upcoming_template: config.upcomingTemplate,
-        follow_up_template: config.followUpTemplate,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.error('Save failed:', error.message);
-    } else {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    }
-    setSaving(false);
   };
 
   const labelClass = 'block text-xs uppercase tracking-wider text-zinc-400 font-semibold mb-1.5';
@@ -127,18 +129,15 @@ export default function MancomCronPage() {
             <h1 className="text-2xl font-bold text-white mt-1">
               Cron Job Automation
             </h1>
-            <p className="text-sm text-zinc-400 mt-2">
-              Configure email recipients, meeting dates, and message templates. Saved to Supabase.
-            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <p className="text-sm text-zinc-400">
+                Changes save automatically.
+              </p>
+              <span className={`text-xs transition-all duration-300 ${saved ? 'text-green-400 opacity-100' : 'opacity-0'}`}>
+                Saved
+              </span>
+            </div>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors disabled:opacity-50"
-          >
-            <HiOutlineSave className="w-4 h-4" />
-            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
-          </button>
         </div>
       </div>
 
