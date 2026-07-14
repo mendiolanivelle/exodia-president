@@ -122,14 +122,15 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
     }
   };
 
-  const isEditable = meeting.status === 'Completed' || meeting.status === 'Today';
+  const isEditable = meeting.status === 'Today';
+  const isViewable = meeting.status === 'Completed' || meeting.status === 'Today';
 
   return (
     <>
       <tr
-        onClick={isEditable ? onToggle : undefined}
+        onClick={isViewable ? onToggle : undefined}
         className={`border-t border-surface-border transition-colors ${
-          isEditable ? 'cursor-pointer hover:bg-surface-input' : ''
+          isViewable ? 'cursor-pointer hover:bg-surface-input' : ''
         } ${isExpanded ? 'bg-surface-input/50' : ''}`}
       >
         <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
@@ -137,7 +138,7 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
         </td>
         <td className="px-4 py-3 text-zinc-200 font-medium flex items-center gap-2">
           {meeting.date}
-          {isEditable && (
+          {isViewable && (
             isExpanded
               ? <HiOutlineChevronDown className="w-4 h-4 text-zinc-500" />
               : <HiOutlineChevronRight className="w-4 h-4 text-zinc-500" />
@@ -147,7 +148,7 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
           {statusBadge(meeting.status)}
         </td>
       </tr>
-      {isExpanded && isEditable && (
+      {isExpanded && isViewable && (
         <tr>
           <td colSpan={3} className="px-4 py-4 bg-surface-input/30">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -162,20 +163,23 @@ function MeetingRow({ meeting, isExpanded, onToggle, pptLinks, onSave }) {
                     onChange={(e) => setForm({ ...form, [dept]: e.target.value })}
                     placeholder="PPT link..."
                     className={inputClass}
+                    disabled={!isEditable}
                   />
                 </div>
               ))}
             </div>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors disabled:opacity-50"
-              >
-                <HiOutlineSave className="w-4 h-4" />
-                {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
-              </button>
-            </div>
+            {isEditable && (
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors disabled:opacity-50"
+                >
+                  <HiOutlineSave className="w-4 h-4" />
+                  {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
+                </button>
+              </div>
+            )}
           </td>
         </tr>
       )}
