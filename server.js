@@ -91,7 +91,7 @@ function transformDoc(doc) {
     for (const tab of doc.tabs) {
       tabs.push({
         title: tab.tabProperties?.title || 'Untitled Tab',
-        sections: parseContent(tab.body?.content || []),
+        sections: parseContent(tab.documentTab?.body?.content || []),
       });
     }
   }
@@ -306,12 +306,12 @@ async function serveDebug(req, res) {
           tabs: (data.tabs || []).map((t) => ({
             tabId: t.tabId,
             title: t.tabProperties?.title,
-            hasBody: !!t.body,
-            bodyContentCount: t.body?.content?.length || 0,
-            bodyKeys: t.body ? Object.keys(t.body) : [],
+            hasBody: !!t.documentTab?.body,
+            bodyContentCount: t.documentTab?.body?.content?.length || 0,
+            bodyKeys: t.documentTab?.body ? Object.keys(t.documentTab.body) : [],
             tabKeys: t.tabProperties ? Object.keys(t.tabProperties) : [],
             allKeys: Object.keys(t),
-            bodyPreview: (t.body?.content || []).slice(0, 5).map((el) => {
+            bodyPreview: (t.documentTab?.body?.content || []).slice(0, 5).map((el) => {
               if (el.paragraph) {
                 const text = (el.paragraph.elements || [])
                   .map((e) => e.textRun?.content || '')
