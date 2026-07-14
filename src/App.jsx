@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import DocPage from './components/DocPage';
+import MancomHistoryPage from './components/MancomHistoryPage';
 import SettingsModal from './components/SettingsModal';
 import Toast from './components/Toast';
 import { useChat } from './hooks/useChat';
@@ -48,6 +49,8 @@ export default function App() {
       >
         {activeView === 'doc' ? (
           <DocPage />
+        ) : activeView === 'mancom-history' ? (
+          <MancomHistoryPage />
         ) : (
           <ChatArea
             messages={messages}
