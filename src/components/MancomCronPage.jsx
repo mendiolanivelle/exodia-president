@@ -23,6 +23,8 @@ export default function MancomCronPage() {
   const [loading, setLoading] = useState(true);
   const loadedRef = useRef(false);
   const saveTimerRef = useRef(null);
+  const configRef = useRef(config);
+  configRef.current = config;
 
   useEffect(() => {
     async function load() {
@@ -97,6 +99,12 @@ export default function MancomCronPage() {
     const dates = [...config.dates];
     dates[i] = value;
     setConfig((prev) => ({ ...prev, dates }));
+  };
+
+  const saveDate = () => {
+    clearTimeout(saveTimerRef.current);
+    const c = configRef.current;
+    saveNow(c.emails, c.dates, c.upcomingTemplate, c.followUpTemplate);
   };
 
   const updateTemplate = (key, field, value) => {
@@ -205,6 +213,7 @@ export default function MancomCronPage() {
                     type="date"
                     value={date}
                     onChange={(e) => updateDate(i, e.target.value)}
+                    onBlur={saveDate}
                     className="flex-1 rounded-lg border border-surface-border bg-surface-input px-3 py-2 text-sm text-white outline-none focus:border-brand-orange"
                   />
                 </div>
