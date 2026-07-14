@@ -219,13 +219,21 @@ export default function MancomHistoryPage() {
   };
 
   const handleSave = async (num, links) => {
+    const { data: current } = await supabase
+      .from('mancom_ppts')
+      .select('links')
+      .eq('meeting_num', num)
+      .single();
+
+    const merged = { ...(current?.links || {}), ...links };
+
     const { error } = await supabase
       .from('mancom_ppts')
-      .upsert({ meeting_num: num, links, updated_at: new Date().toISOString() }, { onConflict: 'meeting_num' });
+      .upsert({ meeting_num: num, links: merged, updated_at: new Date().toISOString() }, { onConflict: 'meeting_num' });
 
     if (error) throw error;
 
-    setPptLinks((prev) => ({ ...prev, [num]: links }));
+    setPptLinks((prev) => ({ ...prev, [num]: merged }));
   };
 
   if (loading) {
