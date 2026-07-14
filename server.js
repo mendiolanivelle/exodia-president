@@ -55,10 +55,8 @@ function parseTable(table) {
   return rows;
 }
 
-function transformDoc(doc) {
+function parseContent(content) {
   const sections = [];
-  const content = doc.body?.content || [];
-
   for (const el of content) {
     if (el.paragraph) {
       const para = el.paragraph;
@@ -80,6 +78,18 @@ function transformDoc(doc) {
     }
     if (el.table) {
       sections.push({ type: 'table', rows: parseTable(el.table) });
+    }
+  }
+  return sections;
+}
+
+function transformDoc(doc) {
+  const sections = parseContent(doc.body?.content || []);
+
+  if (doc.tabs && doc.tabs.length > 0) {
+    for (const tab of doc.tabs) {
+      sections.push({ type: 'h1', text: tab.tabProperties?.title || 'Untitled Tab' });
+      sections.push(...parseContent(tab.body?.content || []));
     }
   }
 
