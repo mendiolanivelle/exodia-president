@@ -108,6 +108,13 @@ async function fetchDocContent() {
     ['https://www.googleapis.com/auth/documents.readonly'],
   );
 
+  try {
+    await jwt.authorize();
+  } catch (authErr) {
+    console.error('JWT authorize failed:', authErr.message);
+    throw new Error(`Auth failed: ${authErr.message}`);
+  }
+
   const docs = google.docs({ version: 'v1', auth: jwt });
   const res = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
   const content = transformDoc(res.data);
