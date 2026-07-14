@@ -13,7 +13,7 @@ const departments = [
   'Sales',
 ];
 
-function computeMeetings(dates, daysBefore = 0, daysAfter = 0) {
+function computeMeetings(dates, daysBefore = 0) {
   return dates.map((date, i) => {
     const num = i + 1;
     const monthIndex = date.getMonth();
@@ -31,13 +31,11 @@ function computeMeetings(dates, daysBefore = 0, daysAfter = 0) {
 
     const openStart = new Date(meetingDate);
     openStart.setDate(openStart.getDate() - daysBefore);
-    const openEnd = new Date(meetingDate);
-    openEnd.setDate(openEnd.getDate() + daysAfter);
 
     let status;
     if (today < openStart) {
       status = 'Upcoming';
-    } else if (today <= openEnd) {
+    } else if (today <= meetingDate) {
       status = 'Open';
     } else {
       status = 'Completed';
@@ -197,7 +195,7 @@ export default function MancomHistoryPage() {
     async function load() {
       const [pptsResult, cronResult] = await Promise.all([
         supabase.from('mancom_ppts').select('meeting_num, links'),
-        supabase.from('mancom_cron').select('dates, days_before, days_after').eq('id', 1).single(),
+        supabase.from('mancom_cron').select('dates, days_before').eq('id', 1).single(),
       ]);
 
       const map = {};
@@ -210,15 +208,13 @@ export default function MancomHistoryPage() {
 
       let dates = [];
       let daysBefore = 0;
-      let daysAfter = 0;
       if (cronResult.data?.dates && cronResult.data.dates.length > 0) {
         dates = cronResult.data.dates.map((d) => new Date(d + 'T00:00:00'));
         daysBefore = cronResult.data.days_before ?? 0;
-        daysAfter = cronResult.data.days_after ?? 0;
       } else {
         dates = await getMancomDates();
       }
-      setMeetings(computeMeetings(dates, daysBefore, daysAfter));
+      setMeetings(computeMeetings(dates, daysBefore));
 
       setLoading(false);
     }
