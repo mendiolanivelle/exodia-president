@@ -6,7 +6,6 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine
-RUN apk add --no-cache openssl
 COPY --from=build /app/dist /app/dist
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/server.js /app/server.js

@@ -1,7 +1,5 @@
 import http from 'node:http';
 import https from 'node:https';
-import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -92,6 +90,27 @@ function transformDoc(doc) {
 }
 
 let docCache = { data: null, ts: 0 };
+let keyJsonPath = null;
+
+function getKeyJsonPath() {
+  if (keyJsonPath) return keyJsonPath;
+  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) return null;
+
+  const key = GOOGLE_PRIVATE_KEY
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .trim();
+
+  const json = {
+    type: 'service_account',
+    client_email: GOOGLE_CLIENT_EMAIL,
+    private_key: key,
+  };
+
+  keyJsonPath = path.join(os.tmpdir(), `exodia-creds-${Date.now()}.json`);
+  fs.writeFileSync(keyJsonPath, JSON.stringify(json));
+  return keyJsonPath;
+}
 
 async function fetchDocContent() {
   if (docCache.data && Date.now() - docCache.ts < 30_000) {
@@ -102,52 +121,15 @@ async function fetchDocContent() {
     throw new Error('Google Doc configuration missing on server.');
   }
 
-  const key = GOOGLE_PRIVATE_KEY
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '')
-    .trim();
+  const keyFile = getKeyJsonPath();
+  if (!keyFile) throw new Error('Failed to create credentials file.');
 
-  let keyToUse = key;
-  try {
-    crypto.createPrivateKey(key);
-  } catch {
-    try {
-      const pk = crypto.createPrivateKey({ key, format: 'pem', type: 'pkcs8', passphrase: '' });
-      keyToUse = pk.export({ type: 'pkcs1', format: 'pem' }).toString();
-    } catch {
-      const tmpPath = path.join(os.tmpdir(), `exodia-key-${Date.now()}.pem`);
-      try {
-        fs.writeFileSync(tmpPath, key);
-        keyToUse = execSync(
-          `openssl pkcs8 -in "${tmpPath}" -inform pem -outform pem -nocrypt -topk8`,
-          { encoding: 'utf8' },
-        ).trim();
-        crypto.createPrivateKey(keyToUse);
-      } catch (opensslErr) {
-        throw new Error(`Key conversion failed: ${opensslErr.message}`);
-      } finally {
-        try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-      }
-    }
-  }
+  const auth = new google.auth.GoogleAuth({
+    keyFile,
+    scopes: ['https://www.googleapis.com/auth/documents.readonly'],
+  });
 
-  const jwt = new google.auth.JWT(
-    GOOGLE_CLIENT_EMAIL,
-    null,
-    keyToUse,
-    ['https://www.googleapis.com/auth/documents.readonly'],
-  );
-
-  try {
-    const creds = await jwt.authorize();
-    if (!creds || !creds.access_token) {
-      throw new Error('JWT authorize returned no access token');
-    }
-  } catch (authErr) {
-    throw new Error(`Auth failed (${authErr.code || 'no-code'}): ${authErr.message}`);
-  }
-
-  const docs = google.docs({ version: 'v1', auth: jwt });
+  const docs = google.docs({ version: 'v1', auth });
   const res = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
   const content = transformDoc(res.data);
 
@@ -267,31 +249,16 @@ function serveDebug(req, res) {
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '')
     .trim();
-  let keyStatus = 'missing';
-  try {
-    crypto.createPrivateKey(key);
-    keyStatus = 'valid (native)';
-  } catch {
-    try {
-      const tmpPath = path.join(os.tmpdir(), `exodia-debug-${Date.now()}.pem`);
-      fs.writeFileSync(tmpPath, key);
-      const converted = execSync(`openssl pkey -in "${tmpPath}" -outform pem`, { encoding: 'utf8' }).trim();
-      fs.unlinkSync(tmpPath);
-      crypto.createPrivateKey(converted);
-      keyStatus = 'valid (openssl converted)';
-    } catch (e) {
-      keyStatus = `invalid: ${e.message.slice(0, 100)}`;
-    }
-  }
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     email: GOOGLE_CLIENT_EMAIL ? 'set' : 'missing',
-    keyStatus,
     keyLength: GOOGLE_PRIVATE_KEY.length,
     hasBegin: key.includes('BEGIN'),
     hasEnd: key.includes('END'),
     newlineCount: (key.match(/\n/g) || []).length,
+    keyFirstChars: key.slice(0, 30),
+    keyLastChars: key.slice(-30),
     docId: GOOGLE_DOC_ID ? 'set' : 'missing',
   }));
 }
