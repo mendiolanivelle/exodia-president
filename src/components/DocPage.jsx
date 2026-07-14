@@ -171,7 +171,7 @@ export default function DocPage() {
       <div className="border-b border-surface-border px-4 py-3 shrink-0">
         <div className="max-w-5xl mx-auto">
           <p className="text-xs uppercase tracking-widest text-brand-orange font-semibold">
-            Legal Guide
+            Management Committee Meeting
           </p>
           <h1 className="text-2xl font-bold text-white mt-1">
             {doc.title}

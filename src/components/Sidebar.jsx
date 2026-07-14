@@ -64,7 +64,7 @@ export default function Sidebar({
             className={itemClass('doc')}
           >
             <HiOutlineBookOpen className="w-4 h-4" />
-            Legal Guide
+            Management Committee Meeting
           </button>
           <button
             onClick={() => {
