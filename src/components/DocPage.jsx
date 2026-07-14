@@ -22,12 +22,19 @@ function LoadingSkeleton() {
 function ErrorState({ message }) {
   return (
     <div className="flex-1 flex items-center justify-center bg-surface-dark px-4">
-      <div className="text-center max-w-md">
+      <div className="text-center max-w-lg">
         <div className="w-14 h-14 rounded-2xl bg-red-600/20 flex items-center justify-center text-red-400 text-xl font-bold mx-auto mb-4">
           !
         </div>
         <h2 className="text-lg font-semibold text-white mb-2">Unable to load document</h2>
-        <p className="text-sm text-zinc-400">{message}</p>
+        <div className="rounded-lg bg-red-950/50 border border-red-800 p-4 mt-4 text-left">
+          <p className="text-xs uppercase tracking-wider text-red-400 font-semibold mb-1">Server Error</p>
+          <p className="text-sm text-red-200 font-mono break-all">{message}</p>
+        </div>
+        <p className="text-xs text-zinc-500 mt-4">
+          Verify GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_DOC_ID are set in Coolify.
+          Make sure the service account has Viewer access to the Google Doc.
+        </p>
       </div>
     </div>
   );
@@ -114,8 +121,11 @@ export default function DocPage() {
   useEffect(() => {
     let cancelled = false;
     fetch('/api/doc')
-      .then((r) => {
-        if (!r.ok) throw new Error(`Server error: ${r.status}`);
+      .then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.error || `Server error: ${r.status}`);
+        }
         return r.json();
       })
       .then((data) => {

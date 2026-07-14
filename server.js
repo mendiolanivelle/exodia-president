@@ -216,6 +216,7 @@ async function serveDocApi(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(content));
   } catch (err) {
+    console.error('Doc API error:', err.message, err.stack);
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: err.message }));
   }
