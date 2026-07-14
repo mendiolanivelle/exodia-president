@@ -111,15 +111,23 @@ async function fetchDocContent() {
   try {
     crypto.createPrivateKey(key);
   } catch {
-    const tmpPath = path.join(os.tmpdir(), `exodia-key-${Date.now()}.pem`);
     try {
-      fs.writeFileSync(tmpPath, key);
-      keyToUse = execSync(`openssl pkey -in "${tmpPath}" -outform pem`, { encoding: 'utf8' }).trim();
-      crypto.createPrivateKey(keyToUse);
-    } catch (opensslErr) {
-      throw new Error(`Key conversion failed: ${opensslErr.message}`);
-    } finally {
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+      const pk = crypto.createPrivateKey({ key, format: 'pem', type: 'pkcs8', passphrase: '' });
+      keyToUse = pk.export({ type: 'pkcs1', format: 'pem' }).toString();
+    } catch {
+      const tmpPath = path.join(os.tmpdir(), `exodia-key-${Date.now()}.pem`);
+      try {
+        fs.writeFileSync(tmpPath, key);
+        keyToUse = execSync(
+          `openssl pkcs8 -in "${tmpPath}" -inform pem -outform pem -nocrypt -topk8`,
+          { encoding: 'utf8' },
+        ).trim();
+        crypto.createPrivateKey(keyToUse);
+      } catch (opensslErr) {
+        throw new Error(`Key conversion failed: ${opensslErr.message}`);
+      } finally {
+        try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+      }
     }
   }
 
