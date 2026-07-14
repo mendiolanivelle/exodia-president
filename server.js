@@ -1,7 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { google } from 'googleapis';
@@ -90,16 +89,6 @@ function transformDoc(doc) {
 }
 
 let docCache = { data: null, ts: 0 };
-let keyFilePath = null;
-
-function getKeyFile() {
-  if (keyFilePath) return keyFilePath;
-  if (!GOOGLE_PRIVATE_KEY) return null;
-  const keyContent = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
-  keyFilePath = path.join(os.tmpdir(), `exodia-gkey-${Date.now()}.pem`);
-  fs.writeFileSync(keyFilePath, keyContent);
-  return keyFilePath;
-}
 
 async function fetchDocContent() {
   if (docCache.data && Date.now() - docCache.ts < 30_000) {
@@ -110,15 +99,16 @@ async function fetchDocContent() {
     throw new Error('Google Doc configuration missing on server.');
   }
 
-  const keyFile = getKeyFile();
-  if (!keyFile) throw new Error('Failed to write private key file.');
+  const key = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile,
-    scopes: ['https://www.googleapis.com/auth/documents.readonly'],
-  });
+  const jwt = new google.auth.JWT(
+    GOOGLE_CLIENT_EMAIL,
+    null,
+    key,
+    ['https://www.googleapis.com/auth/documents.readonly'],
+  );
 
-  const docs = google.docs({ version: 'v1', auth });
+  const docs = google.docs({ version: 'v1', auth: jwt });
   const res = await docs.documents.get({ documentId: GOOGLE_DOC_ID });
   const content = transformDoc(res.data);
 
