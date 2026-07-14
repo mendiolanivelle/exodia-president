@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import {
   HiOutlineChatAlt2,
   HiOutlineBookOpen,
+  HiOutlineChevronDown,
+  HiOutlineChevronRight,
   HiOutlineMenu,
   HiOutlinePlus,
   HiOutlineCog,
@@ -15,8 +18,17 @@ export default function Sidebar({
   onNewChat,
   onOpenSettings,
 }) {
+  const [mancomExpanded, setMancomExpanded] = useState(false);
+
   const itemClass = (view) =>
     `w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+      activeView === view
+        ? 'bg-brand-orange text-white'
+        : 'text-zinc-400 hover:bg-surface-input hover:text-white'
+    }`;
+
+  const subItemClass = (view) =>
+    `w-full flex items-center gap-2 pl-10 pr-3 py-2 rounded-lg text-sm transition-colors ${
       activeView === view
         ? 'bg-brand-orange text-white'
         : 'text-zinc-400 hover:bg-surface-input hover:text-white'
@@ -59,13 +71,29 @@ export default function Sidebar({
             <HiOutlineChatAlt2 className="w-4 h-4" />
             Chat
           </button>
+
           <button
-            onClick={() => onSelectView('doc')}
-            className={itemClass('doc')}
+            onClick={() => setMancomExpanded((v) => !v)}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:bg-surface-input hover:text-white transition-colors"
           >
             <HiOutlineBookOpen className="w-4 h-4" />
-            Management Committee Meeting
+            <span className="flex-1 text-left">Management Committee Meeting</span>
+            {mancomExpanded ? (
+              <HiOutlineChevronDown className="w-4 h-4" />
+            ) : (
+              <HiOutlineChevronRight className="w-4 h-4" />
+            )}
           </button>
+
+          {mancomExpanded && (
+            <button
+              onClick={() => onSelectView('doc')}
+              className={subItemClass('doc')}
+            >
+              Mancom Program Template
+            </button>
+          )}
+
           <button
             onClick={() => {
               onSelectView('chat');
