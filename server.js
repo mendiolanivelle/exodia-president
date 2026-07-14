@@ -1,5 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -101,17 +102,23 @@ async function fetchDocContent() {
 
   const key = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
 
+  let validKey;
+  try {
+    validKey = crypto.createPrivateKey(key);
+  } catch (keyErr) {
+    throw new Error(`Invalid private key format: ${keyErr.message}`);
+  }
+
   const jwt = new google.auth.JWT(
     GOOGLE_CLIENT_EMAIL,
     null,
-    key,
+    validKey.export({ type: 'pkcs1', format: 'pem' }),
     ['https://www.googleapis.com/auth/documents.readonly'],
   );
 
   try {
     await jwt.authorize();
   } catch (authErr) {
-    console.error('JWT authorize failed:', authErr.message);
     throw new Error(`Auth failed: ${authErr.message}`);
   }
 
@@ -230,6 +237,28 @@ async function serveDocApi(req, res) {
   }
 }
 
+function serveDebug(req, res) {
+  const key = GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
+  let keyStatus = 'missing';
+  try {
+    crypto.createPrivateKey(key);
+    keyStatus = 'valid';
+  } catch (e) {
+    keyStatus = `invalid: ${e.message}`;
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    email: GOOGLE_CLIENT_EMAIL ? 'set' : 'missing',
+    keyStatus,
+    keyLength: GOOGLE_PRIVATE_KEY.length,
+    hasBegin: key.includes('BEGIN'),
+    hasEnd: key.includes('END'),
+    newlineCount: (key.match(/\n/g) || []).length,
+    docId: GOOGLE_DOC_ID ? 'set' : 'missing',
+  }));
+}
+
 http
   .createServer((req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -238,6 +267,8 @@ http
       proxyChat(req, res);
     } else if (req.method === 'GET' && url.pathname === '/api/doc') {
       serveDocApi(req, res);
+    } else if (req.method === 'GET' && url.pathname === '/api/debug') {
+      serveDebug(req, res);
     } else {
       serveStatic(req, res);
     }
