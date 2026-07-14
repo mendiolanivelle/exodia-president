@@ -13,8 +13,8 @@ const departments = [
   'Sales',
 ];
 
-function computeMeetings() {
-  return getMancomDates().map((date, i) => {
+function computeMeetings(dates) {
+  return dates.map((date, i) => {
     const num = i + 1;
     const monthIndex = date.getMonth();
     const quarter = Math.floor(monthIndex / 3) + 1;
@@ -178,24 +178,31 @@ export default function MancomHistoryPage() {
   const [pptLinks, setPptLinks] = useState({});
   const [expandedMeeting, setExpandedMeeting] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [meetings, setMeetings] = useState([]);
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from('mancom_ppts')
-        .select('meeting_num, links');
-
-      if (error) {
-        console.error('Failed to load PPT links:', error.message);
-      }
+      const [pptsResult, datesResult] = await Promise.all([
+        supabase.from('mancom_ppts').select('meeting_num, links'),
+        supabase.from('mancom_cron').select('dates').eq('id', 1).single(),
+      ]);
 
       const map = {};
-      if (data) {
-        for (const row of data) {
+      if (pptsResult.data) {
+        for (const row of pptsResult.data) {
           map[row.meeting_num] = row.links;
         }
       }
       setPptLinks(map);
+
+      let dates = [];
+      if (datesResult.data?.dates && datesResult.data.dates.length > 0) {
+        dates = datesResult.data.dates.map((d) => new Date(d + 'T00:00:00'));
+      } else {
+        dates = await getMancomDates();
+      }
+      setMeetings(computeMeetings(dates));
+
       setLoading(false);
     }
     load();
@@ -241,7 +248,6 @@ export default function MancomHistoryPage() {
     );
   }
 
-  const meetings = computeMeetings();
   const quarters = computeQuarters(meetings);
 
   return (

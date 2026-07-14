@@ -1,69 +1,120 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HiOutlineTrash, HiOutlinePlus, HiOutlineSave } from 'react-icons/hi';
+import { supabase } from '../lib/supabase';
 import { getDefaultDates } from '../lib/mancomDates';
 
-function loadConfig() {
-  try {
-    const saved = localStorage.getItem('mancom-cron');
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
-  return {
-    emails: [],
-    dates: getDefaultDates(),
-    upcomingTemplate: {
-      subject: 'Upcoming Mancom Meeting — {{date}}',
-      body: 'Dear team,\n\nThis is a reminder that the Management Committee Meeting will be held on {{date}}.\n\nPlease prepare your department updates.\n\nBest regards,\nMancom Secretariat',
-    },
-    followUpTemplate: {
-      subject: 'Mancom Follow-up — {{date}}',
-      body: 'Dear team,\n\nFollowing up on the Mancom meeting held on {{date}}. Please submit your action items by end of week.\n\nThank you,\nMancom Secretariat',
-    },
-  };
-}
-
-function saveConfig(config) {
-  localStorage.setItem('mancom-cron', JSON.stringify(config));
-}
+const defaultConfig = {
+  emails: [],
+  dates: getDefaultDates(),
+  upcomingTemplate: {
+    subject: 'Upcoming Mancom Meeting — {{date}}',
+    body: 'Dear team,\n\nThis is a reminder that the Management Committee Meeting will be held on {{date}}.\n\nPlease prepare your department updates.\n\nBest regards,\nMancom Secretariat',
+  },
+  followUpTemplate: {
+    subject: 'Mancom Follow-up — {{date}}',
+    body: 'Dear team,\n\nFollowing up on the Mancom meeting held on {{date}}. Please submit your action items by end of week.\n\nThank you,\nMancom Secretariat',
+  },
+};
 
 export default function MancomCronPage() {
-  const [config, setConfig] = useState(loadConfig);
+  const [config, setConfig] = useState(defaultConfig);
   const [emailInput, setEmailInput] = useState('');
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase
+        .from('mancom_cron')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      if (!error && data) {
+        setConfig({
+          emails: data.emails || [],
+          dates: (data.dates && data.dates.length > 0) ? data.dates : getDefaultDates(),
+          upcomingTemplate: data.upcoming_template?.subject
+            ? data.upcoming_template
+            : defaultConfig.upcomingTemplate,
+          followUpTemplate: data.follow_up_template?.subject
+            ? data.follow_up_template
+            : defaultConfig.followUpTemplate,
+        });
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const addEmail = () => {
     const email = emailInput.trim();
     if (!email || !email.includes('@') || config.emails.includes(email)) return;
-    const next = { ...config, emails: [...config.emails, email] };
-    setConfig(next);
+    setConfig((prev) => ({ ...prev, emails: [...prev.emails, email] }));
     setEmailInput('');
   };
 
   const removeEmail = (email) => {
-    const next = { ...config, emails: config.emails.filter((e) => e !== email) };
-    setConfig(next);
+    setConfig((prev) => ({ ...prev, emails: prev.emails.filter((e) => e !== email) }));
   };
 
   const updateDate = (i, value) => {
     const dates = [...config.dates];
     dates[i] = value;
-    setConfig({ ...config, dates });
+    setConfig((prev) => ({ ...prev, dates }));
   };
 
   const updateTemplate = (key, field, value) => {
-    setConfig({
-      ...config,
-      [key]: { ...config[key], [field]: value },
-    });
+    setConfig((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value },
+    }));
   };
 
-  const handleSave = () => {
-    saveConfig(config);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from('mancom_cron')
+      .upsert({
+        id: 1,
+        emails: config.emails,
+        dates: config.dates,
+        upcoming_template: config.upcomingTemplate,
+        follow_up_template: config.followUpTemplate,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+
+    if (error) {
+      console.error('Save failed:', error.message);
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+    setSaving(false);
   };
 
   const labelClass = 'block text-xs uppercase tracking-wider text-zinc-400 font-semibold mb-1.5';
   const inputClass = 'w-full rounded-lg border border-surface-border bg-surface-input px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-brand-orange';
+
+  if (loading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-surface-dark">
+        <div className="border-b border-surface-border px-4 py-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="h-3 w-36 bg-surface-input rounded animate-pulse" />
+            <div className="h-6 w-48 bg-surface-input rounded animate-pulse mt-2" />
+            <div className="h-4 w-72 bg-surface-input rounded animate-pulse mt-2" />
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          <div className="h-40 bg-surface-input rounded animate-pulse" />
+          <div className="h-60 bg-surface-input rounded animate-pulse" />
+          <div className="h-48 bg-surface-input rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface-dark">
@@ -77,15 +128,16 @@ export default function MancomCronPage() {
               Cron Job Automation
             </h1>
             <p className="text-sm text-zinc-400 mt-2">
-              Configure email recipients, meeting dates, and message templates for automated Mancom notifications.
+              Configure email recipients, meeting dates, and message templates. Saved to Supabase.
             </p>
           </div>
           <button
             onClick={handleSave}
-            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors"
+            disabled={saving}
+            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-orange text-white text-sm font-medium hover:bg-brand-orange-hover transition-colors disabled:opacity-50"
           >
             <HiOutlineSave className="w-4 h-4" />
-            {saved ? 'Saved' : 'Save'}
+            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>

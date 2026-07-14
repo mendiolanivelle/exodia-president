@@ -1,35 +1,34 @@
-function computeSecondTuesdays(startYear, startMonth, endYear, endMonth) {
+import { supabase } from './supabase';
+
+function computeSecondTuesdays(year) {
   const dates = [];
-  let year = startYear;
-  let month = startMonth;
-  while (year < endYear || (year === endYear && month <= endMonth)) {
+  for (let month = 1; month <= 12; month++) {
     const firstDay = new Date(year, month - 1, 1);
     const dayOfWeek = firstDay.getDay();
     const daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
     const secondTuesday = 7 + daysUntilTuesday + 1;
-    dates.push(new Date(year, month - 1, secondTuesday));
-    month++;
-    if (month > 12) {
-      month = 1;
-      year++;
-    }
+    const d = new Date(year, month - 1, secondTuesday);
+    dates.push(d.toISOString().slice(0, 10));
   }
   return dates;
 }
 
-export function getMancomDates() {
+export async function getMancomDates() {
   try {
-    const saved = localStorage.getItem('mancom-cron');
-    if (saved) {
-      const config = JSON.parse(saved);
-      if (config.dates && config.dates.length > 0) {
-        return config.dates.map((d) => new Date(d + 'T00:00:00'));
-      }
+    const { data, error } = await supabase
+      .from('mancom_cron')
+      .select('dates')
+      .eq('id', 1)
+      .single();
+
+    if (!error && data && data.dates && data.dates.length > 0) {
+      return data.dates.map((d) => new Date(d + 'T00:00:00'));
     }
   } catch { /* ignore */ }
-  return computeSecondTuesdays(2026, 1, 2026, 12);
+
+  return computeSecondTuesdays(2026).map((d) => new Date(d + 'T00:00:00'));
 }
 
 export function getDefaultDates() {
-  return computeSecondTuesdays(2026, 1, 2026, 12).map((d) => d.toISOString().slice(0, 10));
+  return computeSecondTuesdays(2026);
 }
